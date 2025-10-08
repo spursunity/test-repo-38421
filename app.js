@@ -18,7 +18,6 @@ function initSupabaseClient(callback, retries = 0) {
     }
   }
 }
-
 // === Основная логика приложения ===
 initSupabaseClient((supabase) => {
   function getRoomId() {
@@ -33,9 +32,7 @@ initSupabaseClient((supabase) => {
     }
     return room;
   }
-
   const roomId = getRoomId();
-
   // === Игровое состояние ===
   let localPlayerId = crypto.randomUUID();
   let currentGame = null;
@@ -45,7 +42,6 @@ initSupabaseClient((supabase) => {
   let currentWord = "";
   let scores = { player1: 0, player2: 0 };
   let status = "waiting";
-
   // === Вспомогательная функция для безопасного парсинга JSON ===
   function safeJSONParse(jsonString, fieldName, fallbackValue) {
     try {
@@ -61,7 +57,6 @@ initSupabaseClient((supabase) => {
       return fallbackValue;
     }
   }
-
   // === Функция отображения ошибок в UI ===
   function displayError(message) {
     console.error('[UI Error]:', message);
@@ -71,13 +66,11 @@ initSupabaseClient((supabase) => {
       gameResult.style.color = 'red';
     }
   }
-
   // === Supabase helpers ===
   async function loadGame(id) {
     const { data } = await supabase.from("games").select("*").eq("id", id).single();
     return data;
   }
-
   async function createGame(id, word) {
     const { data } = await supabase.from("games").insert([{
         id: id,
@@ -89,7 +82,6 @@ initSupabaseClient((supabase) => {
     }]);
     return data;
   }
-
   async function joinGame(id) {
     // Обновить поле игроки в БД, если 2 игрока
     const game = await loadGame(id);
@@ -114,11 +106,9 @@ initSupabaseClient((supabase) => {
       await supabase.from("games").update({ players: JSON.stringify(ps), status: ps.length === 2 ? "active" : "waiting" }).eq("id", id);
     }
   }
-
   async function updateGame(id, gameUpdate) {
     await supabase.from("games").update(gameUpdate).eq("id", id);
   }
-
   // === Realtime подписка ===
   function subscribeGame(id, handler) {
     supabase.channel(`room:${id}`)
@@ -127,11 +117,9 @@ initSupabaseClient((supabase) => {
       })
   .subscribe();
   }
-
   // === UI обработка ===
   // Добавь здесь биндинг UI (элементы и обработчики кнопок, синхронизация boardState с DOM и т.д.)
   // В функции handleGameUpdate обновляй UI при поступлении новых данных (board, очки, статусы)
-
   async function init() {
     if (!roomId) return; // после редиректа
     let game = await loadGame(roomId);
@@ -146,17 +134,41 @@ initSupabaseClient((supabase) => {
     subscribeGame(roomId, handleGameUpdate);
     // Инициализация UI (отрисовать board и проч.)
     handleGameUpdate(game);
-
-    // Пример для кнопки "Угадать"
-    document.getElementById('guess-btn').onclick = async function() {
-      const val = document.getElementById('word-input').value;
-      // Логика проверки/обновления boardState
-      // ...
-      await updateGame(roomId, { /* board_state, scores и др. */ });
+    // Пример для кнопки "Угадать" - с защитой от отсутствия элемента
+    const guessBtn = document.getElementById('guess-btn');
+    if (guessBtn) {
+      guessBtn.onclick = async function() {
+        const val = document.getElementById('word-input').value;
+        // Логика проверки/обновления boardState
+        // ...
+        await updateGame(roomId, { /* board_state, scores и др. */ });
+      }
+    } else {
+      console.error('Element with id "guess-btn" not found in DOM');
     }
-    // Добавь аналогично для других кнопок (skip, new game)
+    // Добавить защиту для кнопки skip
+    const skipBtn = document.getElementById('skip-btn');
+    if (skipBtn) {
+      skipBtn.onclick = async function() {
+        // Логика пропуска хода
+        // ...
+        await updateGame(roomId, { /* обновление текущего игрока */ });
+      }
+    } else {
+      console.error('Element with id "skip-btn" not found in DOM');
+    }
+    // Добавить защиту для кнопки новой игры
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (newGameBtn) {
+      newGameBtn.onclick = async function() {
+        // Логика создания новой игры
+        // ...
+        await updateGame(roomId, { /* сброс состояния игры */ });
+      }
+    } else {
+      console.error('Element with id "new-game-btn" not found in DOM');
+    }
   }
-
   function handleGameUpdate(game) {
     // Рендерить boardState, обновлять очки, статус, кто теперь ходит и т.д.
     // Можно вставить логику изменения DOM отсюда
@@ -187,7 +199,6 @@ initSupabaseClient((supabase) => {
     
     // Здесь обновляй DOM: поле, очки, текст текущего игрока и т.д.
   }
-
   // === Старт ===
   init();
 });
