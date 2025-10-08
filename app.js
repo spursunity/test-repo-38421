@@ -2,7 +2,6 @@
 function initSupabaseClient(callback, retries = 0) {
   const MAX_RETRIES = 10;
   const RETRY_DELAY = 200;
-
   if (typeof window.supabase !== 'undefined') {
     // Supabase доступен - инициализируем клиент
     const SUPABASE_URL = "https://bayewbsftycasohrewrv.supabase.co";
@@ -47,6 +46,32 @@ initSupabaseClient((supabase) => {
   let scores = { player1: 0, player2: 0 };
   let status = "waiting";
 
+  // === Вспомогательная функция для безопасного парсинга JSON ===
+  function safeJSONParse(jsonString, fieldName, fallbackValue) {
+    try {
+      if (!jsonString) {
+        console.warn(`${fieldName} is null or undefined, using fallback`);
+        return fallbackValue;
+      }
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error(`Error parsing ${fieldName}:`, error);
+      console.error(`Raw value was:`, jsonString);
+      displayError(`Ошибка парсинга данных (${fieldName}). Проверьте настройки Supabase.`);
+      return fallbackValue;
+    }
+  }
+
+  // === Функция отображения ошибок в UI ===
+  function displayError(message) {
+    console.error('[UI Error]:', message);
+    const gameResult = document.getElementById('game-result');
+    if (gameResult) {
+      gameResult.textContent = `⚠️ ${message}`;
+      gameResult.style.color = 'red';
+    }
+  }
+
   // === Supabase helpers ===
   async function loadGame(id) {
     const { data } = await supabase.from("games").select("*").eq("id", id).single();
@@ -68,7 +93,22 @@ initSupabaseClient((supabase) => {
   async function joinGame(id) {
     // Обновить поле игроки в БД, если 2 игрока
     const game = await loadGame(id);
-    let ps = game.players ? JSON.parse(game.players) : [];
+    
+    // Проверка на null и наличие поля players
+    if (!game) {
+      console.error('Game object is null');
+      displayError('Не удалось загрузить игру из Supabase');
+      return;
+    }
+    
+    if (!game.hasOwnProperty('players')) {
+      console.error('Game object does not have players field');
+      displayError('Объект игры не содержит поле players. Проверьте структуру данных в Supabase.');
+      return;
+    }
+    
+    let ps = safeJSONParse(game.players, 'players', []);
+    
     if (ps.length < 2 && !ps.some(u => u.id === localPlayerId)) {
       ps.push({id: localPlayerId, name: `Игрок ${ps.length+1}`});
       await supabase.from("games").update({ players: JSON.stringify(ps), status: ps.length === 2 ? "active" : "waiting" }).eq("id", id);
@@ -106,6 +146,7 @@ initSupabaseClient((supabase) => {
     subscribeGame(roomId, handleGameUpdate);
     // Инициализация UI (отрисовать board и проч.)
     handleGameUpdate(game);
+
     // Пример для кнопки "Угадать"
     document.getElementById('guess-btn').onclick = async function() {
       const val = document.getElementById('word-input').value;
@@ -119,11 +160,31 @@ initSupabaseClient((supabase) => {
   function handleGameUpdate(game) {
     // Рендерить boardState, обновлять очки, статус, кто теперь ходит и т.д.
     // Можно вставить логику изменения DOM отсюда
+    
+    // Проверка на null перед обращением к полям
+    if (!game) {
+      console.error('Game object is null in handleGameUpdate');
+      displayError('Получен пустой объект игры');
+      return;
+    }
+    
     currentGame = game;
-    boardState = JSON.parse(game.board_state);
-    players = JSON.parse(game.players);
-    scores = JSON.parse(game.scores);
-    status = game.status;
+    
+    // Безопасный парсинг с проверками
+    boardState = safeJSONParse(game.board_state, 'board_state', Array(25).fill(null));
+    
+    // Проверка наличия поля players перед парсингом
+    if (!game.hasOwnProperty('players')) {
+      console.error('Game object does not have players field in handleGameUpdate');
+      displayError('Отсутствует поле players в данных игры. Проверьте конфигурацию Supabase.');
+      players = [];
+    } else {
+      players = safeJSONParse(game.players, 'players', []);
+    }
+    
+    scores = safeJSONParse(game.scores, 'scores', {player1: 0, player2: 0});
+    status = game.status || 'unknown';
+    
     // Здесь обновляй DOM: поле, очки, текст текущего игрока и т.д.
   }
 
