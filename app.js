@@ -1,9 +1,27 @@
-window.addEventListener('DOMContentLoaded', () => {
-  // === Supabase config ===
-  const SUPABASE_URL = "https://bayewbsftycasohrewrv.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJheWV3YnNmdHljYXNvaHJld3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzQzMjYsImV4cCI6MjA3NTQ1MDMyNn0.oWx723ntUOPYomKo8xPCDp_iUP2Qa62ux5FfwkB7rU0";
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// === Суперобеспеченная инициализация Supabase ===
+function initSupabaseClient(callback, retries = 0) {
+  const MAX_RETRIES = 10;
+  const RETRY_DELAY = 200;
 
+  if (typeof window.supabase !== 'undefined') {
+    // Supabase доступен - инициализируем клиент
+    const SUPABASE_URL = "https://bayewbsftycasohrewrv.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJheWV3YnNmdHljYXNvaHJld3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzQzMjYsImV4cCI6MjA3NTQ1MDMyNn0.oWx723ntUOPYomKo8xPCDp_iUP2Qa62ux5FfwkB7rU0";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    callback(supabaseClient);
+  } else {
+    // Supabase еще не загружен
+    if (retries < MAX_RETRIES) {
+      console.warn(`Supabase not available yet, retry ${retries + 1}/${MAX_RETRIES}`);
+      setTimeout(() => initSupabaseClient(callback, retries + 1), RETRY_DELAY);
+    } else {
+      console.error('Failed to initialize Supabase after maximum retries');
+    }
+  }
+}
+
+// === Основная логика приложения ===
+initSupabaseClient((supabase) => {
   function getRoomId() {
     const url = new URL(window.location.href);
     let room = url.searchParams.get("room");
