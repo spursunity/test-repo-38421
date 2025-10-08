@@ -1,204 +1,247 @@
-// === Суперобеспеченная инициализация Supabase ===
-function initSupabaseClient(callback, retries = 0) {
-  const MAX_RETRIES = 10;
-  const RETRY_DELAY = 200;
-  if (typeof window.supabase !== 'undefined') {
-    // Supabase доступен - инициализируем клиент
-    const SUPABASE_URL = "https://bayewbsftycasohrewrv.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJheWV3YnNmdHljYXNvaHJld3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzQzMjYsImV4cCI6MjA3NTQ1MDMyNn0.oWx723ntUOPYomKo8xPCDp_iUP2Qa62ux5FfwkB7rU0";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    callback(supabaseClient);
-  } else {
-    // Supabase еще не загружен
-    if (retries < MAX_RETRIES) {
-      console.warn(`Supabase not available yet, retry ${retries + 1}/${MAX_RETRIES}`);
-      setTimeout(() => initSupabaseClient(callback, retries + 1), RETRY_DELAY);
-    } else {
-      console.error('Failed to initialize Supabase after maximum retries');
-    }
-  }
+// === Игровое состояние ===
+let currentPlayer = 'X';
+let boardState = Array(9).fill('');
+let gameActive = true;
+let currentWord = '';
+let scores = { X: 0, O: 0, draws: 0 };
+let gameMode = 'word'; // 'word' или 'ticTacToe'
+
+// === Функции управления игрой ===
+function initGame() {
+    updateDisplay();
+    createBoard();
+    setupEventListeners();
 }
-// === Основная логика приложения ===
-initSupabaseClient((supabase) => {
-  function getRoomId() {
-    const url = new URL(window.location.href);
-    let room = url.searchParams.get("room");
-    if (!room) {
-      // создаём новую комнату, редиректим пользователя
-      room = crypto.randomUUID();
-      url.searchParams.set("room", room);
-      window.location.replace(url.toString());
-      return null;
-    }
-    return room;
-  }
-  const roomId = getRoomId();
-  // === Игровое состояние ===
-  let localPlayerId = crypto.randomUUID();
-  let currentGame = null;
-  let boardState = Array(25).fill(null);
-  let players = [];
-  let currentPlayer = 1;
-  let currentWord = "";
-  let scores = { player1: 0, player2: 0 };
-  let status = "waiting";
-  // === Вспомогательная функция для безопасного парсинга JSON ===
-  function safeJSONParse(jsonString, fieldName, fallbackValue) {
-    try {
-      if (!jsonString) {
-        console.warn(`${fieldName} is null or undefined, using fallback`);
-        return fallbackValue;
-      }
-      return JSON.parse(jsonString);
-    } catch (error) {
-      console.error(`Error parsing ${fieldName}:`, error);
-      console.error(`Raw value was:`, jsonString);
-      displayError(`Ошибка парсинга данных (${fieldName}). Проверьте настройки Supabase.`);
-      return fallbackValue;
-    }
-  }
-  // === Функция отображения ошибок в UI ===
-  function displayError(message) {
-    console.error('[UI Error]:', message);
-    const gameResult = document.getElementById('game-result');
-    if (gameResult) {
-      gameResult.textContent = `⚠️ ${message}`;
-      gameResult.style.color = 'red';
-    }
-  }
-  // === Supabase helpers ===
-  async function loadGame(id) {
-    const { data } = await supabase.from("games").select("*").eq("id", id).single();
-    return data;
-  }
-  async function createGame(id, word) {
-    const { data } = await supabase.from("games").insert([{
-        id: id,
-        board_state: JSON.stringify(Array(25).fill(null)),
-        word,
-        players: JSON.stringify([{id: localPlayerId, name: "Игрок 1"}]),
-        scores: JSON.stringify({player1: 0, player2: 0}),
-        status: "waiting"
-    }]);
-    return data;
-  }
-  async function joinGame(id) {
-    // Обновить поле игроки в БД, если 2 игрока
-    const game = await loadGame(id);
-    
-    // Проверка на null и наличие поля players
-    if (!game) {
-      console.error('Game object is null');
-      displayError('Не удалось загрузить игру из Supabase');
-      return;
+
+function createBoard() {
+    const gameBoard = document.getElementById('game-board');
+    if (!gameBoard) {
+        console.error('Game board element not found');
+        return;
     }
     
-    if (!game.hasOwnProperty('players')) {
-      console.error('Game object does not have players field');
-      displayError('Объект игры не содержит поле players. Проверьте структуру данных в Supabase.');
-      return;
+    gameBoard.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.addEventListener('click', () => handleCellClick(i));
+        gameBoard.appendChild(cell);
+    }
+}
+
+function handleCellClick(index) {
+    if (boardState[index] !== '' || !gameActive) return;
+    
+    if (gameMode === 'ticTacToe') {
+        boardState[index] = currentPlayer;
+        updateBoard();
+        
+        if (checkWinner()) {
+            endGame(`Игрок ${currentPlayer} выиграл!`);
+            scores[currentPlayer]++;
+        } else if (boardState.every(cell => cell !== '')) {
+            endGame('Ничья!');
+            scores.draws++;
+        } else {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        }
     }
     
-    let ps = safeJSONParse(game.players, 'players', []);
+    updateDisplay();
+}
+
+function checkWinner() {
+    const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтали
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикали
+        [0, 4, 8], [2, 4, 6] // диагонали
+    ];
     
-    if (ps.length < 2 && !ps.some(u => u.id === localPlayerId)) {
-      ps.push({id: localPlayerId, name: `Игрок ${ps.length+1}`});
-      await supabase.from("games").update({ players: JSON.stringify(ps), status: ps.length === 2 ? "active" : "waiting" }).eq("id", id);
+    return winPatterns.some(pattern => {
+        const [a, b, c] = pattern;
+        return boardState[a] && 
+               boardState[a] === boardState[b] && 
+               boardState[a] === boardState[c];
+    });
+}
+
+function updateBoard() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach((cell, index) => {
+        cell.textContent = boardState[index];
+    });
+}
+
+function updateDisplay() {
+    // Обновить текущего игрока
+    const currentPlayerElement = document.getElementById('current-player');
+    if (currentPlayerElement) {
+        currentPlayerElement.textContent = `Текущий игрок: ${currentPlayer}`;
     }
-  }
-  async function updateGame(id, gameUpdate) {
-    await supabase.from("games").update(gameUpdate).eq("id", id);
-  }
-  // === Realtime подписка ===
-  function subscribeGame(id, handler) {
-    supabase.channel(`room:${id}`)
-      .on('postgres_changes', { event: "*", schema: "public", table: "games", filter: `id=eq.${id}` }, payload => {
-        handler(payload.new);
-      })
-  .subscribe();
-  }
-  // === UI обработка ===
-  // Добавь здесь биндинг UI (элементы и обработчики кнопок, синхронизация boardState с DOM и т.д.)
-  // В функции handleGameUpdate обновляй UI при поступлении новых данных (board, очки, статусы)
-  async function init() {
-    if (!roomId) return; // после редиректа
-    let game = await loadGame(roomId);
-    if (!game) {
-      // Создать новую игру (запрос слова у пользователя)
-      const word = prompt("Введите слово для угадывания:");
-      await createGame(roomId, word);
-      game = await loadGame(roomId);
-    }
-    await joinGame(roomId);
-    // Подписка на обновления
-    subscribeGame(roomId, handleGameUpdate);
-    // Инициализация UI (отрисовать board и проч.)
-    handleGameUpdate(game);
-    // Пример для кнопки "Угадать" - с защитой от отсутствия элемента
+    
+    // Обновить счет
+    const scoreX = document.getElementById('score-x');
+    const scoreO = document.getElementById('score-o');
+    const scoreDraw = document.getElementById('score-draw');
+    
+    if (scoreX) scoreX.textContent = scores.X;
+    if (scoreO) scoreO.textContent = scores.O;
+    if (scoreDraw) scoreDraw.textContent = scores.draws;
+}
+
+function setupEventListeners() {
+    // Кнопка "Угадать"
     const guessBtn = document.getElementById('guess-btn');
     if (guessBtn) {
-      guessBtn.onclick = async function() {
-        const val = document.getElementById('word-input').value;
-        // Логика проверки/обновления boardState
-        // ...
-        await updateGame(roomId, { /* board_state, scores и др. */ });
-      }
-    } else {
-      console.error('Element with id "guess-btn" not found in DOM');
+        guessBtn.addEventListener('click', handleGuess);
     }
-    // Добавить защиту для кнопки skip
+    
+    // Кнопка "Пропустить"
     const skipBtn = document.getElementById('skip-btn');
     if (skipBtn) {
-      skipBtn.onclick = async function() {
-        // Логика пропуска хода
-        // ...
-        await updateGame(roomId, { /* обновление текущего игрока */ });
-      }
-    } else {
-      console.error('Element with id "skip-btn" not found in DOM');
+        skipBtn.addEventListener('click', handleSkip);
     }
-    // Добавить защиту для кнопки новой игры
+    
+    // Кнопка "Новая игра"
     const newGameBtn = document.getElementById('new-game-btn');
     if (newGameBtn) {
-      newGameBtn.onclick = async function() {
-        // Логика создания новой игры
-        // ...
-        await updateGame(roomId, { /* сброс состояния игры */ });
-      }
+        newGameBtn.addEventListener('click', startNewGame);
+    }
+    
+    // Кнопка "New Game" (в контролах)
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', startNewGame);
+    }
+    
+    // Кнопка "Reset Score"
+    const scoreResetBtn = document.getElementById('score-reset-btn');
+    if (scoreResetBtn) {
+        scoreResetBtn.addEventListener('click', resetScores);
+    }
+    
+    // Обработчик Enter в поле ввода
+    const wordInput = document.getElementById('word-input');
+    if (wordInput) {
+        wordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleGuess();
+            }
+        });
+    }
+}
+
+function handleGuess() {
+    const wordInput = document.getElementById('word-input');
+    const gameResult = document.getElementById('game-result');
+    
+    if (!wordInput || !gameResult) {
+        console.error('Required elements not found');
+        return;
+    }
+    
+    const guessedWord = wordInput.value.trim().toLowerCase();
+    
+    if (!guessedWord) {
+        gameResult.textContent = 'Введите слово для угадывания!';
+        gameResult.style.color = 'orange';
+        return;
+    }
+    
+    if (!currentWord) {
+        // Первый игрок задает слово
+        currentWord = guessedWord;
+        gameResult.textContent = `Слово задано! Игрок ${currentPlayer === 'X' ? 'O' : 'X'}, угадайте слово.`;
+        gameResult.style.color = 'blue';
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        gameMode = 'word';
     } else {
-      console.error('Element with id "new-game-btn" not found in DOM');
-    }
-  }
-  function handleGameUpdate(game) {
-    // Рендерить boardState, обновлять очки, статус, кто теперь ходит и т.д.
-    // Можно вставить логику изменения DOM отсюда
-    
-    // Проверка на null перед обращением к полям
-    if (!game) {
-      console.error('Game object is null in handleGameUpdate');
-      displayError('Получен пустой объект игры');
-      return;
+        // Проверка угаданного слова
+        if (guessedWord === currentWord) {
+            endGame(`🎉 Поздравляем! Игрок ${currentPlayer} угадал слово "${currentWord}"!`);
+            scores[currentPlayer]++;
+        } else {
+            gameResult.textContent = `Неверно! Попробуйте еще раз или пропустите ход.`;
+            gameResult.style.color = 'red';
+        }
     }
     
-    currentGame = game;
+    wordInput.value = '';
+    updateDisplay();
+}
+
+function handleSkip() {
+    if (!currentWord) {
+        const gameResult = document.getElementById('game-result');
+        if (gameResult) {
+            gameResult.textContent = 'Сначала нужно задать слово!';
+            gameResult.style.color = 'orange';
+        }
+        return;
+    }
     
-    // Безопасный парсинг с проверками
-    boardState = safeJSONParse(game.board_state, 'board_state', Array(25).fill(null));
-    
-    // Проверка наличия поля players перед парсингом
-    if (!game.hasOwnProperty('players')) {
-      console.error('Game object does not have players field in handleGameUpdate');
-      displayError('Отсутствует поле players в данных игры. Проверьте конфигурацию Supabase.');
-      players = [];
+    // Переключить игрока или начать Крестики-Нолики
+    if (gameMode === 'word') {
+        const gameResult = document.getElementById('game-result');
+        if (gameResult) {
+            gameResult.textContent = `Игрок ${currentPlayer} пропустил ход. Начинаем Крестики-Нолики!`;
+            gameResult.style.color = 'blue';
+        }
+        gameMode = 'ticTacToe';
+        currentPlayer = 'X';
     } else {
-      players = safeJSONParse(game.players, 'players', []);
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
     }
     
-    scores = safeJSONParse(game.scores, 'scores', {player1: 0, player2: 0});
-    status = game.status || 'unknown';
+    updateDisplay();
+}
+
+function startNewGame() {
+    currentPlayer = 'X';
+    boardState = Array(9).fill('');
+    gameActive = true;
+    currentWord = '';
+    gameMode = 'word';
     
-    // Здесь обновляй DOM: поле, очки, текст текущего игрока и т.д.
-  }
-  // === Старт ===
-  init();
+    const gameResult = document.getElementById('game-result');
+    if (gameResult) {
+        gameResult.textContent = '';
+        gameResult.style.color = 'black';
+    }
+    
+    const wordInput = document.getElementById('word-input');
+    if (wordInput) {
+        wordInput.value = '';
+    }
+    
+    updateBoard();
+    updateDisplay();
+}
+
+function resetScores() {
+    scores = { X: 0, O: 0, draws: 0 };
+    updateDisplay();
+}
+
+function endGame(message) {
+    gameActive = false;
+    const gameResult = document.getElementById('game-result');
+    if (gameResult) {
+        gameResult.textContent = message;
+        gameResult.style.color = 'green';
+        gameResult.style.fontWeight = 'bold';
+    }
+}
+
+// === Инициализация при загрузке страницы ===
+document.addEventListener('DOMContentLoaded', () => {
+    initGame();
 });
+
+// Если DOM уже загружен
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
