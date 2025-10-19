@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/guess-word-online/', // Имя репозитория для GitHub Pages
+  base: '/test-repo-38421/', // Имя репозитория для GitHub Pages
   build: {
     outDir: 'dist',
     sourcemap: true
