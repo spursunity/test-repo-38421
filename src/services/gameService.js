@@ -126,6 +126,22 @@ export async function revealCell(roomId, row, col) {
       throw new GameError(result.error, result.error)
     }
 
+    if (!result.cell || Object.keys(result.cell).length === 0 || !result.cell.letter) {
+      logger.warn('Backend вернул некорректную клетку, перезагружаем состояние')
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      const gameState = await getGameState(roomId)
+      const boardData = gameState.board_state || gameState.field_state?.grid || gameState.field_state
+
+      if (boardData && boardData[row] && boardData[row][col]) {
+        return {
+          cell: boardData[row][col],
+          revealedCells: result.revealed_cells || 0
+        }
+      }
+    }
+
     logger.info('Клетка открыта', { cell: result.cell, revealedCells: result.revealed_cells })
 
     return {
@@ -224,6 +240,10 @@ export async function getGameState(roomId) {
 
     if (!data) {
       throw new GameError('ROOM_NOT_FOUND', 'Игра не найдена')
+    }
+
+    if (data.field_state && !data.board_state) {
+      data.board_state = data.field_state.grid || data.field_state
     }
 
     return data

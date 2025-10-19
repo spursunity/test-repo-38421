@@ -200,7 +200,17 @@ export class App {
     logger.info('Обновление игры', { gameState })
     this.state.gameState = gameState
 
-    this.components.gameGrid.updateBoard(gameState.board_state)
+    // Поддержка разных структур данных
+    const boardData = gameState.board_state ||
+      (gameState.field_state?.grid) ||
+      gameState.field_state
+
+    if (!boardData) {
+      logger.error('Не найдено поле с данными доски', { gameState })
+      return
+    }
+
+    this.components.gameGrid.updateBoard(boardData)
     this.components.turnIndicator.setCurrentUser(this.state.currentUser.id)
     this.components.turnIndicator.updateGameState(gameState)
 
