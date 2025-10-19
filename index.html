@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Угадай Слово Online</title>
+  <meta name="description" content="Онлайн игра 'Угадай Слово' для двух игроков">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <h1 class="header__title">🎯 Угадай Слово Online</h1>
+    <p class="header__subtitle">Многопользовательская игра для двух игроков</p>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Menu Screen -->
+    <div id="menu-screen" class="menu-screen">
+      <div class="menu-card">
+        <h2 class="menu-card__title">Создать новую игру</h2>
+        <div class="menu-card__content">
+          <label class="menu-label">Длина слова:</label>
+          <select id="word-length-select" class="menu-select">
+            <option value="5">5 букв</option>
+            <option value="6">6 букв</option>
+            <option value="7">7 букв</option>
+            <option value="8">8 букв</option>
+          </select>
+          <button id="create-game-btn" class="menu-btn menu-btn--primary">
+            Создать игру
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-divider">или</div>
+
+      <div class="menu-card">
+        <h2 class="menu-card__title">Присоединиться к игре</h2>
+        <div class="menu-card__content">
+          <label class="menu-label">ID комнаты:</label>
+          <input
+            type="text"
+            id="room-id-input"
+            class="menu-input"
+            placeholder="Вставьте ID комнаты"
+          />
+          <button id="join-game-btn" class="menu-btn menu-btn--secondary">
+            Присоединиться
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="game-screen" style="display: none;">
+      <!-- Room Info -->
+      <div class="room-info">
+        <span class="room-info__label">ID комнаты:</span>
+        <span id="room-id-display" class="room-info__value">-</span>
+        <button id="copy-room-id-btn" class="room-info__copy-btn">
+          Копировать
+        </button>
+      </div>
+
+      <!-- Turn Indicator -->
+      <div id="turn-indicator-container"></div>
+
+      <!-- Game Grid -->
+      <div id="game-grid-container"></div>
+
+      <!-- Guess Input -->
+      <div id="guess-input-container"></div>
+
+      <!-- Game Over Screen -->
+      <div id="game-over-container"></div>
+    </div>
+  </main>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Загрузка...</div>
+  </div>
+
+  <!-- Error Message -->
+  <div id="error-message" class="error-message" style="display: none;">
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p class="footer__text">
+      Создано с использованием 
+      <a href="https://supabase.com" target="_blank" class="footer__link">Supabase</a>
+    </p>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
