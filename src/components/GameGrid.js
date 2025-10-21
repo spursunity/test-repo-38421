@@ -22,6 +22,7 @@ export class GameGrid {
         row,
         col,
         letter: null,
+        content: null,  // ← добавлена поддержка content
         revealed: false
       }))
     )
@@ -35,8 +36,10 @@ export class GameGrid {
         row.map((cell, colIdx) => ({
           row: rowIdx,
           col: colIdx,
-          letter: cell.letter,
-          revealed: cell.revealed
+          // ФИКС: Поддержка обоих полей - letter и content
+          letter: cell.letter || cell.content || null,
+          content: cell.content || cell.letter || null,
+          revealed: cell.revealed || false
         }))
       )
     }
@@ -103,7 +106,9 @@ export class GameGrid {
 
     if (cell.revealed) {
       cellDiv.classList.add('game-cell--revealed')
-      cellDiv.textContent = cell.letter || '?'
+      // ФИКС: Проверяем оба поля - letter и content
+      const displayText = cell.letter || cell.content || '?'
+      cellDiv.textContent = displayText
     } else {
       cellDiv.classList.add('game-cell--hidden')
     }
