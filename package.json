@@ -1,0 +1,29 @@
+{
+  "name": "guess-word-online",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Онлайн игра 'Угадай Слово' для двух игроков",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js",
+    "format": "prettier --write \"src/**/*.{js,css,html}\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.1"
+  },
+  "keywords": [
+    "game",
+    "word-game",
+    "multiplayer",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT"
+}
