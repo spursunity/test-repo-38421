@@ -10,6 +10,143 @@ import { handleError, GameError } from './utils/errorHandler.js'
 import { GestureManager, GestureUtils } from './utils/GestureManager.js'
 
 /**
+ * Утилита для debouncing частых операций
+ */
+class AppDebouncer {
+  constructor() {
+    this.timers = new Map()
+  }
+
+  debounce(key, callback, delay = 300) {
+    if (this.timers.has(key)) {
+      clearTimeout(this.timers.get(key))
+    }
+    
+    const timerId = setTimeout(() => {
+      try {
+        callback()
+      } catch (error) {
+        logger.error(`AppDebouncer: Ошибка в debounced операции ${key}:`, error)
+      } finally {
+        this.timers.delete(key)
+      }
+    }, delay)
+    
+    this.timers.set(key, timerId)
+  }
+
+  clear() {
+    this.timers.forEach(timer => clearTimeout(timer))
+    this.timers.clear()
+  }
+}
+
+/**
+ * Менеджер контекстных меню для очистки event listeners
+ */
+class ContextMenuManager {
+  constructor() {
+    this.activeMenu = null
+    this.closeHandler = null
+  }
+
+  show(x, y, actions) {
+    // Очищаем предыдущее меню
+    this.hide()
+
+    const menu = this.createMenu(x, y, actions)
+    document.body.appendChild(menu)
+    this.activeMenu = menu
+
+    // Настраиваем закрытие меню
+    this.setupCloseHandler()
+  }
+
+  createMenu(x, y, actions) {
+    const menu = document.createElement('div')
+    menu.className = 'context-menu'
+    
+    // Проверяем границы экрана и корректируем позицию
+    const menuWidth = 200
+    const menuHeight = actions.length * 40 + 16
+    
+    let posX = Math.max(10, Math.min(x, window.innerWidth - menuWidth - 10))
+    let posY = Math.max(10, Math.min(y, window.innerHeight - menuHeight - 10))
+    
+    // Если меню в центре, сдвигаем его вверх
+    const isCentered = Math.abs(x - window.innerWidth / 2) < 50 && Math.abs(y - window.innerHeight / 2) < 50
+    if (isCentered) {
+      posY = Math.max(10, y - menuHeight - 20)
+    }
+    
+    menu.style.cssText = `
+      position: fixed;
+      left: ${posX}px;
+      top: ${posY}px;
+      z-index: 10001;
+    `
+
+    actions.forEach((action, index) => {
+      const item = document.createElement('div')
+      item.className = 'context-menu-item'
+      item.textContent = action.text
+      
+      // Добавляем CSS классы из стилей
+      if (action.destructive) {
+        item.classList.add('context-menu-item--destructive')
+      }
+      
+      const clickHandler = () => {
+        try {
+          action.action()
+        } catch (error) {
+          logger.error(`Ошибка в действии контекстного меню:`, error)
+        } finally {
+          this.hide()
+        }
+      }
+      
+      item.addEventListener('click', clickHandler)
+      
+      // Добавляем touch feedback
+      if (GestureUtils.isTouchDevice()) {
+        GestureUtils.addTouchFeedback(item)
+      }
+      
+      menu.appendChild(item)
+    })
+
+    return menu
+  }
+
+  setupCloseHandler() {
+    // Откладываем настройку, чтобы события клика по меню отработали
+    setTimeout(() => {
+      this.closeHandler = (event) => {
+        if (this.activeMenu && !this.activeMenu.contains(event.target)) {
+          this.hide()
+        }
+      }
+      document.addEventListener('click', this.closeHandler)
+      document.addEventListener('touchstart', this.closeHandler, { passive: true })
+    }, 100)
+  }
+
+  hide() {
+    if (this.activeMenu) {
+      this.activeMenu.remove()
+      this.activeMenu = null
+    }
+    
+    if (this.closeHandler) {
+      document.removeEventListener('click', this.closeHandler)
+      document.removeEventListener('touchstart', this.closeHandler)
+      this.closeHandler = null
+    }
+  }
+}
+
+/**
  * Главный класс приложения
  */
 export class App {
@@ -41,8 +178,10 @@ export class App {
       wordLengthSelect: document.getElementById('word-length-select')
     }
 
-    // Инициализируем менеджер жестов
+    // Инициализируем менеджеры
     this.gestureManager = new GestureManager()
+    this.debouncer = new AppDebouncer()
+    this.contextMenuManager = new ContextMenuManager()
   }
 
   async init() {
@@ -125,7 +264,11 @@ export class App {
     logger.info('Инициализация жестов для touch-устройства')
 
     // Инициализируем жесты для основного контейнера
-    this.gestureManager.init(document.body)
+    const success = this.gestureManager.init(document.body)
+    if (!success) {
+      logger.error('Не удалось инициализировать GestureManager')
+      return
+    }
 
     // Обработка swipe-жестов
     this.setupSwipeGestures()
@@ -141,12 +284,12 @@ export class App {
   }
 
   /**
-   * Настройка swipe-жестов
+   * Настройка swipe-жестов с debouncing
    */
   setupSwipeGestures() {
     // Swipe влево - открыть меню / вернуться назад
     this.gestureManager.on('swipeLeft', (data) => {
-      logger.info('Swipe влево обнаружен')
+      logger.info('Swipe влево обнаружен', data)
       
       // Если мы на экране игры, возвращаемся в меню
       if (this.ui.gameScreen?.style.display !== 'none') {
@@ -156,7 +299,7 @@ export class App {
 
     // Swipe вправо - открыть информацию о комнате
     this.gestureManager.on('swipeRight', (data) => {
-      logger.info('Swipe вправо обнаружен')
+      logger.info('Swipe вправо обнаружен', data)
       
       // Показываем информацию о комнате и ссылку для приглашения
       if (this.state.roomId) {
@@ -164,20 +307,28 @@ export class App {
       }
     })
 
-    // Swipe вверх - обновить состояние игры
+    // Swipe вверх - обновить состояние игры (с debouncing)
     this.gestureManager.on('swipeUp', (data) => {
-      logger.info('Swipe вверх обнаружен')
+      logger.info('Swipe вверх обнаружен', data)
       
-      // Обновляем состояние игры
+      // Обновляем состояние игры с debouncing
       if (this.state.roomId && this.ui.gameScreen?.style.display !== 'none') {
-        this.showNotification('Обновление игры...')
-        this.loadGameState()
+        this.debouncer.debounce('loadGameState', () => {
+          this.showNotification('Обновление игры...')
+          this.loadGameState()
+        }, 500)
       }
     })
 
     // Swipe вниз - скрыть клавиатуру / свернуть открытое меню
     this.gestureManager.on('swipeDown', (data) => {
-      logger.info('Swipe вниз обнаружен')
+      logger.info('Swipe вниз обнаружен', data)
+      
+      // Сначала проверяем, если есть открытое контекстное меню
+      if (this.contextMenuManager.activeMenu) {
+        this.contextMenuManager.hide()
+        return
+      }
       
       // Убираем фокус с input элементов для скрытия клавиатуры
       const activeElement = document.activeElement
@@ -249,8 +400,13 @@ export class App {
     // Добавляем feedback для кнопок
     const buttons = document.querySelectorAll('button, .menu-btn, .game-cell')
     buttons.forEach(button => {
-      GestureUtils.addTouchFeedback(button, 'touch-active')
+      const cleanup = GestureUtils.addTouchFeedback(button, 'touch-active')
       GestureUtils.preventGestureDefaults(button)
+      
+      // Проверяем accessibility
+      if (!GestureUtils.isAccessibleTouchTarget(button)) {
+        logger.warn('Элемент не соответствует рекомендациям accessibility:', button)
+      }
     })
   }
 
@@ -261,7 +417,7 @@ export class App {
     const row = cellElement.dataset.row
     const col = cellElement.dataset.col
     const isRevealed = cellElement.classList.contains('game-cell--revealed')
-    const letter = cellElement.textContent || ''
+    const letter = cellElement.textContent?.trim() || ''
     
     let message = `Клетка (${parseInt(row) + 1}, ${parseInt(col) + 1})`
     
@@ -289,11 +445,15 @@ export class App {
       },
       {
         text: 'Обновить состояние',
-        action: () => this.loadGameState()
+        action: () => {
+          this.debouncer.debounce('refreshGameState', () => {
+            this.loadGameState()
+          }, 100)
+        }
       }
     ]
     
-    this.showContextMenu(x, y, actions)
+    this.contextMenuManager.show(x, y, actions)
   }
 
   /**
@@ -313,84 +473,27 @@ export class App {
         text: 'Вставить из буфера',
         action: async () => {
           try {
+            // Проверяем поддержку clipboard API
+            if (!navigator.clipboard || !navigator.clipboard.readText) {
+              throw new Error('Clipboard API не поддерживается')
+            }
+            
             const text = await navigator.clipboard.readText()
-            inputElement.value = text
-            this.showNotification('Текст вставлен')
+            if (text) {
+              inputElement.value = text
+              this.showNotification('Текст вставлен')
+            } else {
+              this.showNotification('Буфер обмена пуст')
+            }
           } catch (error) {
+            logger.error('Ошибка при чтении из буфера обмена:', error)
             this.showNotification('Не удалось получить данные из буфера')
           }
         }
       }
     ]
     
-    this.showContextMenu(x, y, actions)
-  }
-
-  /**
-   * Показ общего контекстного меню
-   */
-  showContextMenu(x, y, actions) {
-    // Удаляем предыдущее меню, если оно есть
-    const existingMenu = document.querySelector('.context-menu')
-    if (existingMenu) {
-      existingMenu.remove()
-    }
-
-    const menu = document.createElement('div')
-    menu.className = 'context-menu'
-    menu.style.cssText = `
-      position: fixed;
-      left: ${x}px;
-      top: ${y}px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      z-index: 10001;
-      min-width: 200px;
-      padding: 8px 0;
-      transform: translate(-50%, -100%);
-    `
-
-    actions.forEach(action => {
-      const item = document.createElement('div')
-      item.className = 'context-menu-item'
-      item.textContent = action.text
-      item.style.cssText = `
-        padding: 12px 16px;
-        cursor: pointer;
-        font-size: 14px;
-        color: #2c3e50;
-        transition: background-color 0.2s;
-      `
-      
-      item.addEventListener('mouseover', () => {
-        item.style.backgroundColor = '#f8f9fa'
-      })
-      
-      item.addEventListener('mouseout', () => {
-        item.style.backgroundColor = 'transparent'
-      })
-      
-      item.addEventListener('click', () => {
-        action.action()
-        menu.remove()
-      })
-      
-      menu.appendChild(item)
-    })
-
-    document.body.appendChild(menu)
-
-    // Удаляем меню при клике вне его
-    setTimeout(() => {
-      const closeMenu = (event) => {
-        if (!menu.contains(event.target)) {
-          menu.remove()
-          document.removeEventListener('click', closeMenu)
-        }
-      }
-      document.addEventListener('click', closeMenu)
-    }, 100)
+    this.contextMenuManager.show(x, y, actions)
   }
 
   /**
@@ -402,7 +505,8 @@ export class App {
         text: 'Да, выйти в меню',
         action: () => {
           this.handleNewGame()
-        }
+        },
+        destructive: true
       },
       {
         text: 'Отмена',
@@ -416,7 +520,7 @@ export class App {
     const centerX = window.innerWidth / 2
     const centerY = window.innerHeight / 2
     
-    this.showContextMenu(centerX, centerY, actions)
+    this.contextMenuManager.show(centerX, centerY, actions)
   }
 
   checkUrlParams() {
@@ -601,10 +705,11 @@ export class App {
     if (this.state.roomId) {
       const url = `${window.location.origin}${window.location.pathname}?room=${this.state.roomId}`
 
-      if (navigator.clipboard) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
           this.showNotification('Ссылка скопирована в буфер обмена!')
-        }).catch(() => {
+        }).catch((error) => {
+          logger.error('Ошибка копирования ссылки:', error)
           this.showNotification(`Поделитесь ссылкой: ${url}`)
         })
       } else {
@@ -615,10 +720,15 @@ export class App {
 
   copyRoomId() {
     if (this.state.roomId) {
-      if (navigator.clipboard) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(this.state.roomId).then(() => {
           this.showNotification('ID комнаты скопирован!')
+        }).catch((error) => {
+          logger.error('Ошибка копирования ID комнаты:', error)
+          this.showNotification(`ID комнаты: ${this.state.roomId}`)
         })
+      } else {
+        this.showNotification(`ID комнаты: ${this.state.roomId}`)
       }
     }
   }
@@ -685,19 +795,44 @@ export class App {
 
   handleError(error, context = '') {
     this.hideLoading()
+    
+    // Подробное логирование ошибки
     const gameError = handleError(error)
     const message = context ? `${context}: ${gameError.message}` : gameError.message
+    
+    logger.error(`Ошибка в приложении: ${context}`, {
+      error: gameError,
+      originalError: error,
+      stack: error?.stack,
+      context,
+      userState: {
+        roomId: this.state.roomId,
+        isLoading: this.state.isLoading
+      }
+    })
+    
     this.showError(message)
-    logger.error(context, { error: gameError })
   }
 
   cleanup() {
     logger.info('Очистка ресурсов приложения')
+    
+    // Очищаем Realtime подписки
     realtimeManager.unsubscribeAll()
     
-    // Очищаем гестры
-    if (this.gestureManager) {
+    // Очищаем жесты
+    if (this.gestureManager && this.gestureManager.isActive()) {
       this.gestureManager.destroy()
+    }
+    
+    // Очищаем debouncer
+    if (this.debouncer) {
+      this.debouncer.clear()
+    }
+    
+    // Очищаем контекстное меню
+    if (this.contextMenuManager) {
+      this.contextMenuManager.hide()
     }
   }
 }
