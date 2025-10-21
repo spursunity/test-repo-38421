@@ -10,6 +10,18 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   color: #2c3e50;
+  /* Улучшения для мобильных устройств */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
+}
+
+/* Предотвращение зума при фокусе на input на iOS */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+select {
+  font-size: 16px;
 }
 
 /* ========== HEADER ========== */
@@ -18,17 +30,24 @@ body {
   padding: 30px 20px;
   background-color: rgba(255, 255, 255, 0.95);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  /* Улучшение для мобильных */
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header__title {
   font-size: 36px;
   color: #2c3e50;
   margin-bottom: 8px;
+  /* Улучшение читаемости на мобильных */
+  line-height: 1.2;
 }
 
 .header__subtitle {
   font-size: 16px;
   color: #7f8c8d;
+  line-height: 1.4;
 }
 
 /* ========== MAIN ========== */
@@ -36,6 +55,8 @@ body {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  /* Улучшения для мобильных */
+  min-height: calc(100vh - 200px);
 }
 
 /* ========== MENU SCREEN ========== */
@@ -52,6 +73,12 @@ body {
   border-radius: 16px;
   padding: 30px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  /* Улучшения для мобильных */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-card:active {
+  transform: scale(0.98);
 }
 
 .menu-card__title {
@@ -59,6 +86,7 @@ body {
   color: #2c3e50;
   margin-bottom: 20px;
   text-align: center;
+  line-height: 1.3;
 }
 
 .menu-card__content {
@@ -80,12 +108,18 @@ body {
   border: 2px solid #bdc3c7;
   border-radius: 8px;
   transition: border-color 0.3s ease;
+  /* Улучшения для мобильных */
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: white;
 }
 
 .menu-select:focus,
 .menu-input:focus {
   outline: none;
   border-color: #3498db;
+  /* Добавляем внутреннюю тень для лучшей видимости фокуса */
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .menu-btn {
@@ -96,6 +130,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  /* Улучшения для мобильных */
+  min-height: 48px;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.menu-btn:active {
+  transform: scale(0.96);
 }
 
 .menu-btn--primary {
@@ -126,6 +168,7 @@ body {
   color: white;
   font-weight: bold;
   position: relative;
+  margin: 10px 0;
 }
 
 .menu-divider::before,
@@ -161,11 +204,14 @@ body {
   align-items: center;
   gap: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Улучшения для мобильных */
+  flex-wrap: wrap;
 }
 
 .room-info__label {
   font-size: 14px;
   color: #7f8c8d;
+  white-space: nowrap;
 }
 
 .room-info__value {
@@ -174,6 +220,9 @@ body {
   color: #2c3e50;
   font-family: monospace;
   flex: 1;
+  /* Улучшения для мобильных */
+  word-break: break-all;
+  min-width: 0;
 }
 
 .room-info__copy-btn {
@@ -185,11 +234,19 @@ body {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
+  /* Улучшения для мобильных */
+  min-height: 36px;
+  touch-action: manipulation;
+  white-space: nowrap;
 }
 
 .room-info__copy-btn:hover {
   background-color: #2980b9;
   transform: scale(1.05);
+}
+
+.room-info__copy-btn:active {
+  transform: scale(0.95);
 }
 
 /* ========== GAME GRID ========== */
@@ -204,6 +261,9 @@ body {
   background-color: #f5f5f5;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* Улучшения для мобильных */
+  width: 100%;
+  aspect-ratio: 1;
 }
 
 .game-grid--disabled {
@@ -221,6 +281,9 @@ body {
   border-radius: 8px;
   transition: all 0.3s ease;
   user-select: none;
+  /* Улучшения для мобильных */
+  min-height: 40px;
+  touch-action: manipulation;
 }
 
 .game-cell--hidden {
@@ -232,6 +295,10 @@ body {
   background-color: #2980b9;
   transform: scale(1.05);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.game-cell--interactive:active {
+  transform: scale(0.95);
 }
 
 .game-cell--revealed {
@@ -259,6 +326,9 @@ body {
 .guess-input {
   max-width: 400px;
   margin: 20px auto;
+  /* Улучшения для мобильных */
+  width: 100%;
+  padding: 0 20px;
 }
 
 .guess-input__field-wrapper {
@@ -274,11 +344,14 @@ body {
   border-radius: 8px;
   transition: border-color 0.3s ease;
   text-transform: uppercase;
+  /* Улучшения для мобильных */
+  min-height: 48px;
 }
 
 .guess-input__field:focus {
   outline: none;
   border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .guess-input__field:disabled {
@@ -296,6 +369,10 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.1s ease;
+  /* Улучшения для мобильных */
+  min-height: 48px;
+  touch-action: manipulation;
+  white-space: nowrap;
 }
 
 .guess-input__submit:hover:not(:disabled) {
@@ -304,7 +381,7 @@ body {
 }
 
 .guess-input__submit:active:not(:disabled) {
-  transform: translateY(0);
+  transform: scale(0.95);
 }
 
 .guess-input__submit:disabled {
@@ -321,6 +398,8 @@ body {
   border-radius: 4px;
   font-size: 14px;
   animation: slideDown 0.3s ease;
+  /* Улучшения для мобильных */
+  word-break: break-word;
 }
 
 .guess-input__hint {
@@ -328,6 +407,7 @@ body {
   font-size: 12px;
   color: #7f8c8d;
   text-align: center;
+  line-height: 1.4;
 }
 
 @keyframes slideDown {
@@ -350,6 +430,8 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  /* Улучшения для мобильных */
+  width: calc(100% - 40px);
 }
 
 .turn-indicator__status {
@@ -359,6 +441,9 @@ body {
   margin-bottom: 15px;
   padding: 10px;
   border-radius: 8px;
+  /* Улучшения для мобильных */
+  line-height: 1.3;
+  word-break: break-word;
 }
 
 .turn-indicator--waiting .turn-indicator__status {
@@ -387,6 +472,8 @@ body {
   justify-content: space-around;
   align-items: center;
   gap: 20px;
+  /* Улучшения для мобильных */
+  flex-wrap: wrap;
 }
 
 .turn-indicator__player {
@@ -394,6 +481,9 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  /* Улучшения для мобильных */
+  min-width: 0;
+  flex: 1;
 }
 
 .turn-indicator__player--you .turn-indicator__player-label {
@@ -404,6 +494,8 @@ body {
 .turn-indicator__player-label {
   font-size: 14px;
   color: #7f8c8d;
+  text-align: center;
+  word-break: break-word;
 }
 
 .turn-indicator__score {
@@ -422,6 +514,8 @@ body {
   font-size: 28px;
   font-weight: bold;
   color: #bdc3c7;
+  /* Улучшения для мобильных */
+  flex-shrink: 0;
 }
 
 @keyframes pulse-glow {
@@ -446,6 +540,8 @@ body {
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease;
+  /* Улучшения для мобильных */
+  padding: 20px;
 }
 
 .game-over {
@@ -457,6 +553,9 @@ body {
   text-align: center;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.4s ease;
+  /* Улучшения для мобильных */
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 .game-over__emoji {
@@ -469,6 +568,7 @@ body {
   font-size: 28px;
   margin-bottom: 20px;
   color: #2c3e50;
+  line-height: 1.2;
 }
 
 .game-over--win .game-over__title {
@@ -504,6 +604,9 @@ body {
   font-weight: bold;
   color: #2c3e50;
   letter-spacing: 4px;
+  /* Улучшения для мобильных */
+  word-break: break-all;
+  line-height: 1.2;
 }
 
 .game-over__scores {
@@ -515,29 +618,38 @@ body {
   padding: 20px;
   background-color: #ecf0f1;
   border-radius: 12px;
+  /* Улучшения для мобильных */
+  flex-wrap: wrap;
 }
 
 .game-over__score-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Улучшения для мобильных */
+  flex: 1;
+  min-width: 0;
 }
 
 .game-over__score-label {
   font-size: 14px;
   color: #7f8c8d;
+  text-align: center;
 }
 
 .game-over__score-value {
   font-size: 32px;
   font-weight: bold;
   color: #34495e;
+  text-align: center;
 }
 
 .game-over__score-separator {
   font-size: 28px;
   font-weight: bold;
   color: #bdc3c7;
+  /* Улучшения для мобильных */
+  flex-shrink: 0;
 }
 
 .game-over__actions {
@@ -555,6 +667,13 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  /* Улучшения для мобильных */
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+.game-over__btn:active {
+  transform: scale(0.96);
 }
 
 .game-over__btn--primary {
@@ -661,6 +780,8 @@ body {
   animation: slideDown 0.3s ease;
   max-width: 90%;
   text-align: center;
+  /* Улучшения для мобильных */
+  word-break: break-word;
 }
 
 /* ========== NOTIFICATIONS ========== */
@@ -678,6 +799,8 @@ body {
   transition: all 0.3s ease;
   max-width: 90%;
   text-align: center;
+  /* Улучшения для мобильных */
+  word-break: break-word;
 }
 
 .notification--show {
@@ -695,6 +818,7 @@ body {
 .footer__text {
   font-size: 14px;
   color: white;
+  line-height: 1.4;
 }
 
 .footer__link {
@@ -709,7 +833,12 @@ body {
 }
 
 /* ========== АДАПТИВНОСТЬ ========== */
+/* Планшеты (средние экраны) */
 @media (max-width: 768px) {
+  .header {
+    padding: 25px 20px;
+  }
+
   .header__title {
     font-size: 28px;
   }
@@ -718,70 +847,187 @@ body {
     font-size: 14px;
   }
 
+  .main {
+    padding: 16px;
+  }
+
   .menu-screen {
     max-width: 90%;
+    gap: 25px;
+    margin: 30px auto;
   }
 
   .menu-card {
-    padding: 20px;
+    padding: 25px;
   }
 
   .menu-card__title {
     font-size: 20px;
   }
+
+  .game-grid {
+    max-width: 350px;
+    gap: 6px;
+    padding: 16px;
+  }
+
+  .game-cell {
+    font-size: 22px;
+  }
+
+  .turn-indicator {
+    max-width: 350px;
+  }
+
+  .turn-indicator__score {
+    font-size: 30px;
+  }
+
+  .guess-input {
+    max-width: 350px;
+    padding: 0 16px;
+  }
+
+  .game-over {
+    padding: 35px 25px;
+  }
+
+  .game-over__emoji {
+    font-size: 70px;
+  }
+
+  .game-over__title {
+    font-size: 24px;
+  }
+
+  .game-over__word-value {
+    font-size: 32px;
+    letter-spacing: 3px;
+  }
+
+  .game-over__scores {
+    gap: 25px;
+  }
+
+  .game-over__score-value {
+    font-size: 30px;
+  }
 }
 
+/* Мобильные телефоны (малые экраны) */
 @media (max-width: 480px) {
   .header {
     padding: 20px 15px;
+    position: static; /* Убираем sticky на очень маленьких экранах */
   }
 
   .header__title {
     font-size: 24px;
   }
 
+  .header__subtitle {
+    font-size: 13px;
+  }
+
   .main {
     padding: 15px;
+    min-height: auto;
+  }
+
+  .menu-screen {
+    margin: 20px auto;
+    gap: 20px;
+  }
+
+  .menu-card {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .menu-card__title {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  .menu-card__content {
+    gap: 12px;
+  }
+
+  .menu-btn {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .menu-divider {
+    font-size: 16px;
+    margin: 8px 0;
   }
 
   .game-grid {
-    max-width: 320px;
-    gap: 6px;
-    padding: 15px;
+    max-width: 280px;
+    gap: 4px;
+    padding: 12px;
+    margin: 16px auto;
   }
 
   .game-cell {
-    font-size: 20px;
+    font-size: 18px;
+    border-radius: 6px;
   }
 
   .room-info {
     flex-direction: column;
     align-items: stretch;
     text-align: center;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .room-info__value {
+    font-size: 13px;
+    margin: 4px 0;
   }
 
   .room-info__copy-btn {
     width: 100%;
+    padding: 10px;
+    font-size: 13px;
   }
 
   .guess-input {
-    max-width: 320px;
+    max-width: 280px;
+    padding: 0 15px;
   }
 
   .guess-input__field-wrapper {
     flex-direction: column;
+    gap: 8px;
+  }
+
+  .guess-input__field {
+    font-size: 16px;
+    padding: 10px 14px;
   }
 
   .guess-input__submit {
     width: 100%;
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .guess-input__hint {
+    font-size: 11px;
   }
 
   .turn-indicator {
-    max-width: 320px;
+    max-width: 280px;
+    padding: 16px;
   }
 
   .turn-indicator__status {
-    font-size: 18px;
+    font-size: 16px;
+    padding: 8px;
+    margin-bottom: 12px;
   }
 
   .turn-indicator__scores {
@@ -789,30 +1035,268 @@ body {
   }
 
   .turn-indicator__score {
-    font-size: 28px;
+    font-size: 26px;
+  }
+
+  .turn-indicator__separator {
+    font-size: 24px;
+  }
+
+  .turn-indicator__player-label {
+    font-size: 12px;
   }
 
   .game-over {
-    padding: 30px 20px;
+    padding: 25px 16px;
+    width: 95%;
+    border-radius: 12px;
   }
 
   .game-over__emoji {
-    font-size: 60px;
+    font-size: 50px;
+    margin-bottom: 16px;
   }
 
   .game-over__title {
-    font-size: 22px;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+
+  .game-over__word {
+    margin: 20px 0;
+    padding: 16px;
+  }
+
+  .game-over__word-label {
+    font-size: 13px;
+    margin-bottom: 6px;
   }
 
   .game-over__word-value {
-    font-size: 28px;
+    font-size: 24px;
+    letter-spacing: 2px;
   }
 
   .game-over__scores {
-    gap: 20px;
+    gap: 16px;
+    padding: 16px;
+    flex-direction: row;
+  }
+
+  .game-over__score-item {
+    flex: 1;
+  }
+
+  .game-over__score-label {
+    font-size: 12px;
   }
 
   .game-over__score-value {
+    font-size: 24px;
+  }
+
+  .game-over__score-separator {
+    font-size: 20px;
+  }
+
+  .game-over__actions {
+    margin-top: 20px;
+    gap: 10px;
+  }
+
+  .game-over__btn {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border-width: 5px;
+  }
+
+  .loading-text {
+    font-size: 16px;
+  }
+
+  .error-message {
+    top: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    margin: 0 10px;
+    max-width: calc(100% - 20px);
+    left: 10px;
+    right: 10px;
+    transform: none;
+  }
+
+  .notification {
+    margin: 0 10px;
+    max-width: calc(100% - 20px);
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .footer {
+    padding: 20px 15px;
+    margin-top: 30px;
+  }
+
+  .footer__text {
+    font-size: 13px;
+  }
+}
+
+/* Очень маленькие экраны (менее 360px) */
+@media (max-width: 360px) {
+  .header__title {
+    font-size: 22px;
+  }
+
+  .game-grid {
+    max-width: 250px;
+    gap: 3px;
+    padding: 10px;
+  }
+
+  .game-cell {
+    font-size: 16px;
+  }
+
+  .guess-input {
+    max-width: 250px;
+  }
+
+  .turn-indicator {
+    max-width: 250px;
+  }
+
+  .turn-indicator__score {
+    font-size: 24px;
+  }
+
+  .game-over__word-value {
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .game-over__score-value {
+    font-size: 22px;
+  }
+
+  .menu-card__title {
+    font-size: 16px;
+  }
+}
+
+/* Улучшения для landscape ориентации на мобильных */
+@media (max-height: 600px) and (orientation: landscape) {
+  .header {
+    padding: 15px 20px;
+  }
+
+  .header__title {
+    font-size: 22px;
+    margin-bottom: 5px;
+  }
+
+  .header__subtitle {
+    font-size: 12px;
+  }
+
+  .main {
+    padding: 10px;
+  }
+
+  .menu-screen {
+    margin: 15px auto;
+    gap: 15px;
+  }
+
+  .menu-card {
+    padding: 16px;
+  }
+
+  .game-grid {
+    max-width: 250px;
+    margin: 10px auto;
+    padding: 10px;
+  }
+
+  .turn-indicator {
+    padding: 12px;
+    margin: 10px auto;
+  }
+
+  .game-over {
+    padding: 20px 16px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .game-over__emoji {
+    font-size: 40px;
+    margin-bottom: 10px;
+  }
+
+  .game-over__title {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .footer {
+    padding: 15px;
+    margin-top: 20px;
+  }
+}
+
+/* Улучшения для больших мобильных экранов (phablets) */
+@media (min-width: 481px) and (max-width: 640px) {
+  .game-grid {
+    max-width: 320px;
+  }
+
+  .guess-input {
+    max-width: 320px;
+  }
+
+  .turn-indicator {
+    max-width: 320px;
+  }
+
+  .game-cell {
+    font-size: 20px;
+  }
+
+  .turn-indicator__score {
     font-size: 28px;
+  }
+}
+
+/* Улучшения для доступности */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Темная тема для устройств с соответствующими настройками */
+@media (prefers-color-scheme: dark) {
+  /* Здесь можно добавить стили для темной темы если потребуется */
+}
+
+/* Высокая контрастность для улучшенной доступности */
+@media (prefers-contrast: high) {
+  .menu-btn {
+    border: 2px solid currentColor;
+  }
+  
+  .game-cell--hidden {
+    border: 2px solid #2c3e50;
+  }
+  
+  .game-cell--revealed {
+    border: 3px solid #34495e;
   }
 }
