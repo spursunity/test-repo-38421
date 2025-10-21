@@ -145,5 +145,6 @@ export class GameGrid {
   destroy() {
     this.container.innerHTML = ''
     this.onCellClick = null
+    // №
   }
 }
