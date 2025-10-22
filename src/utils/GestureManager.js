@@ -101,6 +101,40 @@ export class GestureManager {
   }
 
   /**
+   * Проверка, должен ли элемент быть исключен из обработки жестов
+   */
+  shouldExcludeElement(target) {
+    if (!target || !(target instanceof HTMLElement)) {
+      return false
+    }
+
+    // Исключаем form элементы
+    const excludedTags = ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'OPTION']
+    if (excludedTags.includes(target.tagName)) {
+      return true
+    }
+
+    // Исключаем элементы внутри form элементов
+    const formParent = target.closest('select, input, textarea, button')
+    if (formParent) {
+      return true
+    }
+
+    // Исключаем элементы с data-attribute для исключения
+    if (target.dataset.excludeGestures === 'true') {
+      return true
+    }
+
+    // Проверяем родительские элементы с data-exclude-gestures
+    const excludeParent = target.closest('[data-exclude-gestures="true"]')
+    if (excludeParent) {
+      return true
+    }
+
+    return false
+  }
+
+  /**
    * Инициализация менеджера жестов для элемента
    * @param {HTMLElement} element - DOM элемент
    * @returns {boolean} - успешность инициализации
@@ -282,10 +316,15 @@ export class GestureManager {
   }
 
   /**
-   * Обработка начала касания
+   * Обработка начала касания с проверкой исключений
    */
   handleTouchStart(event) {
     if (this.isDestroyed || event.touches.length !== 1) {
+      return
+    }
+
+    // Проверяем, должен ли элемент быть исключен
+    if (this.shouldExcludeElement(event.target)) {
       return
     }
 
@@ -324,6 +363,11 @@ export class GestureManager {
       return
     }
 
+    // Проверяем, должен ли элемент быть исключен
+    if (this.shouldExcludeElement(event.target)) {
+      return
+    }
+
     const touch = event.touches[0]
     const deltaX = Math.abs(touch.clientX - this.touchStartX)
     const deltaY = Math.abs(touch.clientY - this.touchStartY)
@@ -346,6 +390,11 @@ export class GestureManager {
     this.clearTimeouts()
     
     if (event.changedTouches.length !== 1) {
+      return
+    }
+
+    // Проверяем, должен ли элемент быть исключен
+    if (this.shouldExcludeElement(event.target)) {
       return
     }
 
