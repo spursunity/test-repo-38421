@@ -22,7 +22,7 @@
         <h2 class="menu-card__title">Создать новую игру</h2>
         <div class="menu-card__content">
           <label class="menu-label">Длина слова:</label>
-          <select id="word-length-select" class="menu-select">
+          <select id="word-length-select" class="menu-select" data-exclude-gestures="true">
             <option value="5">5 букв</option>
             <option value="6">6 букв</option>
             <option value="7">7 букв</option>
@@ -45,6 +45,7 @@
             id="room-id-input"
             class="menu-input"
             placeholder="Вставьте ID комнаты"
+            data-exclude-gestures="true"
           />
           <button id="join-game-btn" class="menu-btn menu-btn--secondary">
             Присоединиться
