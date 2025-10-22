@@ -155,7 +155,8 @@ export class App {
       currentUser: null,
       roomId: null,
       gameState: null,
-      isLoading: false
+      isLoading: false,
+      isCreatingGame: false // Новый флаг для предотвращения двойного создания
     }
 
     this.components = {
@@ -235,17 +236,66 @@ export class App {
   }
 
   attachEventListeners() {
-    this.ui.createGameBtn?.addEventListener('click', () => {
-      this.handleCreateGame()
+    // Обработчик для создания игры с проверкой цели
+    this.ui.createGameBtn?.addEventListener('click', (event) => {
+      // Проверяем, что событие произошло именно от кнопки, а не всплыло от select
+      if (event.target === this.ui.createGameBtn || this.ui.createGameBtn.contains(event.target)) {
+        event.stopPropagation() // Предотвращаем всплытие
+        this.handleCreateGame()
+      }
     })
 
-    this.ui.joinGameBtn?.addEventListener('click', () => {
-      this.handleJoinGame()
+    // Обработчик для присоединения к игре с аналогичной проверкой
+    this.ui.joinGameBtn?.addEventListener('click', (event) => {
+      if (event.target === this.ui.joinGameBtn || this.ui.joinGameBtn.contains(event.target)) {
+        event.stopPropagation()
+        this.handleJoinGame()
+      }
     })
 
     this.ui.copyRoomIdBtn?.addEventListener('click', () => {
       this.copyRoomId()
     })
+
+    // Специальные обработчики для select элементов
+    if (this.ui.wordLengthSelect) {
+      // Предотвращаем случайное создание игры при клике на select
+      this.ui.wordLengthSelect.addEventListener('click', (event) => {
+        event.stopPropagation()
+        logger.info('Select клик перехвачен и остановлен')
+      })
+
+      // Предотвращаем touch события на select элементах
+      this.ui.wordLengthSelect.addEventListener('touchstart', (event) => {
+        event.stopPropagation()
+        logger.info('Select touchstart перехвачен')
+      }, { passive: false })
+
+      this.ui.wordLengthSelect.addEventListener('touchend', (event) => {
+        event.stopPropagation()
+        logger.info('Select touchend перехвачен')
+      }, { passive: false })
+
+      // Логирование изменений в select
+      this.ui.wordLengthSelect.addEventListener('change', (event) => {
+        logger.info('Изменение длины слова:', event.target.value)
+      })
+    }
+
+    // Аналогичная защита для input элементов
+    if (this.ui.roomIdInput) {
+      this.ui.roomIdInput.addEventListener('click', (event) => {
+        event.stopPropagation()
+      })
+
+      this.ui.roomIdInput.addEventListener('touchstart', (event) => {
+        event.stopPropagation()
+      }, { passive: false })
+
+      this.ui.roomIdInput.addEventListener('touchend', (event) => {
+        event.stopPropagation()
+      }, { passive: false })
+    }
 
     window.addEventListener('beforeunload', () => {
       this.cleanup()
@@ -357,8 +407,12 @@ export class App {
       // Если double-tap на экране меню, создаем быструю игру
       const menuScreen = data.target?.closest('.menu-screen')
       if (menuScreen && this.ui.menuScreen?.style.display !== 'none') {
-        this.showNotification('Быстрое создание игры...')
-        this.handleCreateGame()
+        // Проверяем, что double-tap не на form элементах
+        const isFormElement = data.target?.closest('select, input, textarea, button')
+        if (!isFormElement) {
+          this.showNotification('Быстрое создание игры...')
+          this.handleCreateGame()
+        }
       }
     })
   }
@@ -397,15 +451,18 @@ export class App {
    * Добавление visual feedback для touch-взаимодействия
    */
   addTouchFeedback() {
-    // Добавляем feedback для кнопок
+    // Добавляем feedback для кнопок (но не для form элементов)
     const buttons = document.querySelectorAll('button, .menu-btn, .game-cell')
     buttons.forEach(button => {
-      const cleanup = GestureUtils.addTouchFeedback(button, 'touch-active')
-      GestureUtils.preventGestureDefaults(button)
-      
-      // Проверяем accessibility
-      if (!GestureUtils.isAccessibleTouchTarget(button)) {
-        logger.warn('Элемент не соответствует рекомендациям accessibility:', button)
+      // Пропускаем form элементы
+      if (!button.closest('select, input, textarea')) {
+        const cleanup = GestureUtils.addTouchFeedback(button, 'touch-active')
+        GestureUtils.preventGestureDefaults(button)
+        
+        // Проверяем accessibility
+        if (!GestureUtils.isAccessibleTouchTarget(button)) {
+          logger.warn('Элемент не соответствует рекомендациям accessibility:', button)
+        }
       }
     })
   }
@@ -537,12 +594,27 @@ export class App {
   }
 
   async handleCreateGame() {
+    // Предотвращаем случайное двойное создание игры
+    if (this.state.isCreatingGame) {
+      logger.warn('Игра уже создаётся, пропускаем повторный вызов')
+      return
+    }
+
+    this.state.isCreatingGame = true
+    
+    // Сбрасываем флаг через короткое время
+    setTimeout(() => {
+      this.state.isCreatingGame = false
+    }, 2000)
+
     logger.info('Создание новой игры')
 
     try {
       this.showLoading('Создание игры...')
 
       const wordLength = parseInt(this.ui.wordLengthSelect?.value || '5')
+      logger.info('Используемая длина слова:', wordLength)
+      
       const result = await createGame(wordLength)
       this.state.roomId = result.roomId
 
@@ -555,6 +627,7 @@ export class App {
       this.displayRoomId(this.state.roomId)
 
     } catch (error) {
+      this.state.isCreatingGame = false
       this.handleError(error, 'Не удалось создать игру')
     }
   }
