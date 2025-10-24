@@ -218,6 +218,58 @@ export async function validateGuess(roomId, guessedWord) {
 }
 
 /**
+ * Пропуск хода - передача хода сопернику
+ * @param {string} roomId - UUID комнаты 
+ * @returns {Promise<{skipped: boolean, nextPlayer: number}>}
+ */
+export async function skipTurn(roomId) {
+  // Валидация UUID
+  if (!validateUUID(roomId)) {
+    throw new GameError('INVALID_INPUT', 'Некорректный ID комнаты')
+  }
+
+  logger.info('Пропуск хода', { roomId })
+  perfMonitor.startMeasure('skip_turn')
+
+  try {
+    const operation = async () => {
+      // Используем функцию validate_guess с пустой строкой для пропуска хода
+      const { data, error } = await supabase.rpc('validate_guess', {
+        p_room_id: roomId,
+        p_guessed_word: '' // Пустая строка = пропуск хода
+      })
+      if (error) throw error
+      return data
+    }
+
+    const result = await retryOperation(operation)
+    perfMonitor.endMeasure('skip_turn')
+
+    if (result.success === false) {
+      throw new GameError(result.error, result.error)
+    }
+
+    // Проверяем, что это действительно пропуск хода
+    if (result.skipped !== true) {
+      logger.warn('Неожиданный ответ при пропуске хода', { result })
+      throw new GameError('UNEXPECTED_RESPONSE', 'Неожиданный ответ сервера при пропуске хода')
+    }
+
+    logger.info('Ход пропущен', { nextPlayer: result.next_player })
+    
+    return {
+      skipped: true,
+      nextPlayer: result.next_player
+    }
+  } catch (error) {
+    perfMonitor.endMeasure('skip_turn')
+    const gameError = handleError(error)
+    logger.error('Ошибка пропуска хода', { roomId, error: gameError.message })
+    throw gameError
+  }
+}
+
+/**
  * Получение состояния игры
  * @param {string} roomId - UUID комнаты
  * @returns {Promise<object>}
