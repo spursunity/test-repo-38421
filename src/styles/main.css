@@ -194,17 +194,25 @@ select {
   animation: fadeIn 0.5s ease;
 }
 
-/* Room Info */
+/* ========== ENHANCED ROOM INFO ========== */
 .room-info {
   background-color: white;
-  padding: 15px 20px;
+  padding: 20px;
   border-radius: 12px;
   margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.room-info:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.room-info__main {
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  /* Улучшения для мобильных */
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
@@ -212,41 +220,373 @@ select {
   font-size: 14px;
   color: #7f8c8d;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .room-info__value {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   color: #2c3e50;
-  font-family: monospace;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid #e9ecef;
   flex: 1;
-  /* Улучшения для мобильных */
   word-break: break-all;
   min-width: 0;
+  letter-spacing: 1px;
 }
 
-.room-info__copy-btn {
-  padding: 8px 16px;
+.room-info__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.room-info__btn {
+  padding: 10px 16px;
   font-size: 14px;
-  color: white;
-  background-color: #3498db;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  /* Улучшения для мобильных */
-  min-height: 36px;
+  min-height: 40px;
   touch-action: manipulation;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 120px;
 }
 
-.room-info__copy-btn:hover {
-  background-color: #2980b9;
-  transform: scale(1.05);
-}
-
-.room-info__copy-btn:active {
+.room-info__btn:active {
   transform: scale(0.95);
+}
+
+.room-info__btn--primary {
+  color: white;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.room-info__btn--primary:hover {
+  background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(40, 167, 69, 0.4);
+}
+
+.room-info__btn--secondary {
+  color: #3498db;
+  background: white;
+  border: 2px solid #3498db;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+}
+
+.room-info__btn--secondary:hover {
+  background: #ebf3fd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* ========== WAITING INDICATOR ========== */
+.waiting-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fef7e6 0%, #fff3cd 100%);
+  border: 2px solid #ffeaa7;
+  border-radius: 12px;
+  animation: waitingPulse 2s ease-in-out infinite alternate;
+}
+
+.waiting-indicator__spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(243, 156, 18, 0.3);
+  border-top-color: #f39c12;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.waiting-indicator__text {
+  font-size: 14px;
+  color: #d68910;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+}
+
+@keyframes waitingPulse {
+  0% {
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.2);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 4px 16px rgba(243, 156, 18, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+/* ========== SHARE MODAL ========== */
+.share-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  animation: modalFadeIn 0.3s ease;
+}
+
+.share-modal__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.share-modal__content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.share-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 0 24px;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.share-modal__title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.share-modal__close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #7f8c8d;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.share-modal__close:hover {
+  background: #f8f9fa;
+  color: #e74c3c;
+  transform: scale(1.1);
+}
+
+.share-modal__close:active {
+  transform: scale(0.95);
+}
+
+.share-modal__body {
+  padding: 0 24px 24px 24px;
+}
+
+.share-modal__description {
+  font-size: 16px;
+  color: #5a6c7d;
+  margin-bottom: 20px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.share-modal__link-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+.share-modal__link-input {
+  flex: 1;
+  padding: 14px 16px;
+  font-size: 14px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: #f8f9fa;
+  color: #2c3e50;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  transition: all 0.3s ease;
+  word-break: break-all;
+  min-height: 48px;
+}
+
+.share-modal__link-input:focus {
+  outline: none;
+  border-color: #3498db;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.share-modal__copy-btn {
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  min-height: 48px;
+  touch-action: manipulation;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.share-modal__copy-btn:hover {
+  background: linear-gradient(135deg, #2980b9 0%, #1f4e79 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(52, 152, 219, 0.4);
+}
+
+.share-modal__copy-btn:active {
+  transform: scale(0.95);
+}
+
+.share-modal__native {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.share-modal__native-btn {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  touch-action: manipulation;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(142, 68, 173, 0.3);
+}
+
+.share-modal__native-btn:hover {
+  background: linear-gradient(135deg, #7d3c98 0%, #8a4fae 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(142, 68, 173, 0.4);
+}
+
+.share-modal__native-btn:active {
+  transform: scale(0.95);
+}
+
+.share-modal__tips {
+  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #d4edda;
+}
+
+.share-modal__tips-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #155724;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-modal__tips-title::before {
+  content: '💡';
+  font-size: 20px;
+}
+
+.share-modal__tips-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.share-modal__tips-list li {
+  font-size: 14px;
+  color: #155724;
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.share-modal__tips-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #28a745;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.share-modal__tips-list li:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 /* ========== GAME GRID ========== */
@@ -1003,6 +1343,34 @@ button.touch-active,
     padding: 14px 18px;
     min-height: 44px;
   }
+
+  /* Share Modal на планшетах */
+  .share-modal__content {
+    width: 95%;
+    max-width: 450px;
+  }
+  
+  .share-modal__title {
+    font-size: 22px;
+  }
+  
+  .share-modal__link-container {
+    flex-direction: column;
+  }
+  
+  .share-modal__copy-btn {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .room-info__actions {
+    flex-direction: column;
+  }
+  
+  .room-info__btn {
+    min-width: auto;
+    width: 100%;
+  }
 }
 
 /* Мобильные телефоны (малые экраны) */
@@ -1067,22 +1435,33 @@ button.touch-active,
   }
 
   .room-info {
+    padding: 12px 16px;
+  }
+
+  .room-info__main {
     flex-direction: column;
     align-items: stretch;
     text-align: center;
-    padding: 12px 16px;
+    margin-bottom: 12px;
     gap: 8px;
   }
 
   .room-info__value {
     font-size: 13px;
+    padding: 6px 10px;
     margin: 4px 0;
   }
 
-  .room-info__copy-btn {
+  .room-info__actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .room-info__btn {
     width: 100%;
     padding: 10px;
     font-size: 13px;
+    min-width: auto;
   }
 
   .guess-input {
@@ -1249,6 +1628,78 @@ button.touch-active,
     min-height: 48px;
     font-size: 15px;
   }
+
+  /* Share Modal на мобильных */
+  .share-modal__content {
+    width: 95%;
+    max-width: none;
+    max-height: 95vh;
+  }
+  
+  .share-modal__header {
+    padding: 20px 20px 0 20px;
+    margin-bottom: 20px;
+  }
+  
+  .share-modal__title {
+    font-size: 20px;
+  }
+  
+  .share-modal__body {
+    padding: 0 20px 20px 20px;
+  }
+  
+  .share-modal__description {
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+  
+  .share-modal__link-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .share-modal__link-input {
+    font-size: 13px;
+    padding: 12px 14px;
+  }
+  
+  .share-modal__copy-btn {
+    width: 100%;
+    font-size: 13px;
+    padding: 12px;
+  }
+  
+  .share-modal__native-btn {
+    width: 100%;
+    font-size: 15px;
+    padding: 12px;
+  }
+  
+  .share-modal__tips {
+    padding: 16px;
+  }
+  
+  .share-modal__tips-title {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .share-modal__tips-list li {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .waiting-indicator {
+    padding: 12px;
+    gap: 8px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .waiting-indicator__text {
+    font-size: 13px;
+  }
 }
 
 /* Очень маленькие экраны (менее 360px) */
@@ -1299,6 +1750,14 @@ button.touch-active,
   .context-menu-item {
     padding: 14px 16px;
     font-size: 14px;
+  }
+
+  .share-modal__content {
+    width: 98%;
+  }
+  
+  .share-modal__title {
+    font-size: 18px;
   }
 }
 
@@ -1365,6 +1824,18 @@ button.touch-active,
     max-height: calc(100vh - 40px);
     overflow-y: auto;
   }
+
+  .share-modal__content {
+    max-height: calc(100vh - 20px);
+  }
+  
+  .share-modal__header {
+    padding: 16px 20px 0 20px;
+  }
+  
+  .share-modal__body {
+    padding: 0 20px 16px 20px;
+  }
 }
 
 /* Улучшения для больших мобильных экранов (phablets) */
@@ -1388,6 +1859,15 @@ button.touch-active,
   .turn-indicator__score {
     font-size: 28px;
   }
+
+  .room-info__actions {
+    flex-direction: row;
+  }
+  
+  .room-info__btn {
+    flex: 1;
+    min-width: 100px;
+  }
 }
 
 /* Улучшения для доступности */
@@ -1399,6 +1879,18 @@ button.touch-active,
   }
 
   .context-menu {
+    animation: none;
+  }
+
+  .share-modal {
+    animation: none;
+  }
+  
+  .share-modal__content {
+    animation: none;
+  }
+
+  .waiting-indicator {
     animation: none;
   }
 }
@@ -1432,5 +1924,13 @@ button.touch-active,
 
   .context-menu-item:last-child {
     border-bottom: none;
+  }
+
+  .share-modal__content {
+    border: 2px solid #2c3e50;
+  }
+  
+  .room-info__btn {
+    border: 2px solid currentColor;
   }
 }

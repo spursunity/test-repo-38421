@@ -147,6 +147,169 @@ class ContextMenuManager {
 }
 
 /**
+ * Менеджер модального окна для шаринга
+ */
+class ShareModalManager {
+  constructor() {
+    this.modal = null
+    this.isOpen = false
+    this.closeHandlers = []
+  }
+
+  init() {
+    this.modal = document.getElementById('share-modal')
+    if (!this.modal) {
+      logger.error('Share modal element not found')
+      return false
+    }
+
+    this.setupEventListeners()
+    return true
+  }
+
+  setupEventListeners() {
+    // Кнопка закрытия
+    const closeBtn = document.getElementById('close-share-modal')
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.hide())
+    }
+
+    // Клик по backdrop
+    const backdrop = this.modal.querySelector('.share-modal__backdrop')
+    if (backdrop) {
+      backdrop.addEventListener('click', () => this.hide())
+    }
+
+    // ESC для закрытия
+    const escHandler = (event) => {
+      if (event.key === 'Escape' && this.isOpen) {
+        this.hide()
+      }
+    }
+    document.addEventListener('keydown', escHandler)
+    this.closeHandlers.push(() => document.removeEventListener('keydown', escHandler))
+  }
+
+  show(shareUrl, roomId) {
+    if (!this.modal) {
+      logger.error('Share modal not initialized')
+      return
+    }
+
+    // Заполняем данные
+    const linkInput = document.getElementById('share-link-input')
+    if (linkInput) {
+      linkInput.value = shareUrl
+    }
+
+    // Настраиваем кнопку копирования
+    this.setupCopyButton(shareUrl)
+    
+    // Настраиваем native share если доступен
+    this.setupNativeShare(shareUrl, roomId)
+
+    // Показываем модал
+    this.modal.style.display = 'block'
+    this.isOpen = true
+
+    // Фокус на input для удобства
+    setTimeout(() => {
+      if (linkInput) {
+        linkInput.select()
+      }
+    }, 100)
+
+    logger.info('Share modal opened', { shareUrl, roomId })
+  }
+
+  setupCopyButton(shareUrl) {
+    const copyBtn = document.getElementById('copy-share-link-btn')
+    if (!copyBtn) return
+
+    const originalText = copyBtn.textContent
+    
+    const copyHandler = async () => {
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        copyBtn.textContent = '✅ Скопировано!'
+        copyBtn.style.backgroundColor = '#22c55e'
+        
+        setTimeout(() => {
+          copyBtn.textContent = originalText
+          copyBtn.style.backgroundColor = ''
+        }, 2000)
+        
+        logger.info('Share URL copied to clipboard')
+      } catch (error) {
+        logger.error('Failed to copy share URL:', error)
+        copyBtn.textContent = '❌ Ошибка'
+        setTimeout(() => {
+          copyBtn.textContent = originalText
+        }, 2000)
+      }
+    }
+
+    // Удаляем старые обработчики
+    copyBtn.replaceWith(copyBtn.cloneNode(true))
+    const newCopyBtn = document.getElementById('copy-share-link-btn')
+    newCopyBtn.addEventListener('click', copyHandler)
+  }
+
+  setupNativeShare(shareUrl, roomId) {
+    const nativeContainer = document.getElementById('native-share-container')
+    const nativeBtn = document.getElementById('native-share-btn')
+    
+    if (!nativeContainer || !nativeBtn) return
+
+    // Проверяем поддержку Web Share API
+    if (!navigator.share) {
+      nativeContainer.style.display = 'none'
+      return
+    }
+
+    nativeContainer.style.display = 'block'
+    
+    const shareHandler = async () => {
+      try {
+        await navigator.share({
+          title: '🎯 Угадай Слово Online',
+          text: `Присоединяйся к игре! Комната: ${roomId}`,
+          url: shareUrl
+        })
+        
+        logger.info('Native share completed')
+        this.hide() // Закрываем модал после успешного шаринга
+        
+      } catch (error) {
+        if (error.name !== 'AbortError') { // Пользователь просто отменил
+          logger.error('Native share failed:', error)
+        }
+      }
+    }
+
+    // Удаляем старые обработчики
+    nativeBtn.replaceWith(nativeBtn.cloneNode(true))
+    const newNativeBtn = document.getElementById('native-share-btn')
+    newNativeBtn.addEventListener('click', shareHandler)
+  }
+
+  hide() {
+    if (!this.modal) return
+
+    this.modal.style.display = 'none'
+    this.isOpen = false
+    
+    logger.info('Share modal closed')
+  }
+
+  destroy() {
+    this.hide()
+    this.closeHandlers.forEach(handler => handler())
+    this.closeHandlers = []
+  }
+}
+
+/**
  * Главный класс приложения
  */
 export class App {
@@ -156,7 +319,8 @@ export class App {
       roomId: null,
       gameState: null,
       isLoading: false,
-      isCreatingGame: false // Новый флаг для предотвращения двойного создания
+      isCreatingGame: false, // Новый флаг для предотвращения двойного создания
+      isFirstPlayer: false // Флаг для определения первого игрока
     }
 
     this.components = {
@@ -176,6 +340,8 @@ export class App {
       roomIdInput: document.getElementById('room-id-input'),
       roomIdDisplay: document.getElementById('room-id-display'),
       copyRoomIdBtn: document.getElementById('copy-room-id-btn'),
+      shareRoomBtn: document.getElementById('share-room-btn'), // Новая кнопка
+      waitingIndicator: document.getElementById('waiting-indicator'), // Индикатор ожидания
       wordLengthSelect: document.getElementById('word-length-select')
     }
 
@@ -183,6 +349,7 @@ export class App {
     this.gestureManager = new GestureManager()
     this.debouncer = new AppDebouncer()
     this.contextMenuManager = new ContextMenuManager()
+    this.shareModalManager = new ShareModalManager() // Новый менеджер
   }
 
   async init() {
@@ -198,6 +365,7 @@ export class App {
       this.initComponents()
       this.attachEventListeners()
       this.initGestures()
+      this.initShareModal() // Инициализация модала
       this.checkUrlParams()
 
       this.hideLoading()
@@ -207,6 +375,13 @@ export class App {
     } catch (error) {
       perfMonitor.endMeasure('app_init')
       this.handleError(error, 'Ошибка инициализации приложения')
+    }
+  }
+
+  initShareModal() {
+    const success = this.shareModalManager.init()
+    if (!success) {
+      logger.warn('Share modal initialization failed, falling back to simple sharing')
     }
   }
 
@@ -255,6 +430,11 @@ export class App {
 
     this.ui.copyRoomIdBtn?.addEventListener('click', () => {
       this.copyRoomId()
+    })
+
+    // Новый обработчик для кнопки "Отправить игру"
+    this.ui.shareRoomBtn?.addEventListener('click', () => {
+      this.handleShareRoomClick()
     })
 
     // Специальные обработчики для select элементов
@@ -347,13 +527,13 @@ export class App {
       }
     })
 
-    // Swipe вправо - открыть информацию о комнате
+    // Swipe вправо - открыть share modal
     this.gestureManager.on('swipeRight', (data) => {
       logger.info('Swipe вправо обнаружен', data)
       
-      // Показываем информацию о комнате и ссылку для приглашения
-      if (this.state.roomId) {
-        this.handleShareRoom()
+      // Показываем share modal если есть roomId
+      if (this.state.roomId && this.state.isFirstPlayer) {
+        this.handleShareRoomClick()
       }
     })
 
@@ -380,6 +560,12 @@ export class App {
         return
       }
       
+      // Закрываем share modal если открыт
+      if (this.shareModalManager.isOpen) {
+        this.shareModalManager.hide()
+        return
+      }
+      
       // Убираем фокус с input элементов для скрытия клавиатуры
       const activeElement = document.activeElement
       if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
@@ -393,14 +579,14 @@ export class App {
    * Настройка tap-жестов
    */
   setupTapGestures() {
-    // Double-tap на комнате - скопировать ID
+    // Double-tap на комнате - открыть share modal
     this.gestureManager.on('doubleTap', (data) => {
       logger.info('Double-tap обнаружен', data)
       
-      // Если double-tap на room info, копируем ID
+      // Если double-tap на room info и мы первый игрок, открываем share modal
       const roomInfo = data.target?.closest('.room-info')
-      if (roomInfo && this.state.roomId) {
-        this.copyRoomId()
+      if (roomInfo && this.state.roomId && this.state.isFirstPlayer) {
+        this.handleShareRoomClick()
         return
       }
 
@@ -495,20 +681,25 @@ export class App {
       {
         text: 'Копировать ID',
         action: () => this.copyRoomId()
-      },
-      {
-        text: 'Поделиться ссылкой',
-        action: () => this.handleShareRoom()
-      },
-      {
-        text: 'Обновить состояние',
-        action: () => {
-          this.debouncer.debounce('refreshGameState', () => {
-            this.loadGameState()
-          }, 100)
-        }
       }
     ]
+
+    // Добавляем опцию поделиться только для первого игрока
+    if (this.state.isFirstPlayer) {
+      actions.push({
+        text: 'Отправить ссылку',
+        action: () => this.handleShareRoomClick()
+      })
+    }
+
+    actions.push({
+      text: 'Обновить состояние',
+      action: () => {
+        this.debouncer.debounce('refreshGameState', () => {
+          this.loadGameState()
+        }, 100)
+      }
+    })
     
     this.contextMenuManager.show(x, y, actions)
   }
@@ -589,7 +780,11 @@ export class App {
       if (this.ui.roomIdInput) {
         this.ui.roomIdInput.value = roomId
       }
-      this.handleJoinGame()
+      
+      // Автоматически присоединяемся к игре
+      this.debouncer.debounce('autoJoinFromUrl', () => {
+        this.handleJoinGame()
+      }, 500)
     }
   }
 
@@ -601,6 +796,7 @@ export class App {
     }
 
     this.state.isCreatingGame = true
+    this.state.isFirstPlayer = true // Устанавливаем флаг первого игрока
     
     // Сбрасываем флаг через короткое время
     setTimeout(() => {
@@ -625,9 +821,13 @@ export class App {
       this.showGameScreen()
       this.hideLoading()
       this.displayRoomId(this.state.roomId)
+      
+      // Показываем индикатор ожидания для первого игрока
+      this.showWaitingForPlayer()
 
     } catch (error) {
       this.state.isCreatingGame = false
+      this.state.isFirstPlayer = false
       this.handleError(error, 'Не удалось создать игру')
     }
   }
@@ -647,6 +847,7 @@ export class App {
 
       const result = await joinGame(roomId)
       this.state.roomId = roomId
+      this.state.isFirstPlayer = false // Второй игрок
 
       logger.info('Присоединились к игре', { roomId, firstPlayer: result.firstPlayer })
 
@@ -660,6 +861,76 @@ export class App {
     }
   }
 
+  /**
+   * Показать индикатор ожидания второго игрока
+   */
+  showWaitingForPlayer() {
+    if (this.ui.waitingIndicator && this.state.isFirstPlayer) {
+      this.ui.waitingIndicator.style.display = 'flex'
+      logger.info('Showing waiting indicator for first player')
+    }
+  }
+
+  /**
+   * Скрыть индикатор ожидания
+   */
+  hideWaitingForPlayer() {
+    if (this.ui.waitingIndicator) {
+      this.ui.waitingIndicator.style.display = 'none'
+      logger.info('Hiding waiting indicator')
+    }
+  }
+
+  /**
+   * Обработчик клика по кнопке "Отправить игру"
+   */
+  handleShareRoomClick() {
+    if (!this.state.roomId) {
+      this.showError('Сначала создайте игру')
+      return
+    }
+
+    if (!this.state.isFirstPlayer) {
+      this.showNotification('Только создатель игры может отправлять приглашения')
+      return
+    }
+
+    const shareUrl = this.generateShareUrl(this.state.roomId)
+    
+    // Пробуем открыть модальное окно, если не получается - fallback
+    try {
+      this.shareModalManager.show(shareUrl, this.state.roomId)
+      logger.info('Share modal opened successfully')
+    } catch (error) {
+      logger.error('Failed to open share modal, using fallback:', error)
+      this.fallbackShareRoom(shareUrl)
+    }
+  }
+
+  /**
+   * Генерация URL для шаринга
+   */
+  generateShareUrl(roomId) {
+    const baseUrl = `${window.location.origin}${window.location.pathname}`
+    return `${baseUrl}?room=${encodeURIComponent(roomId)}`
+  }
+
+  /**
+   * Fallback метод для шаринга (если модал не работает)
+   */
+  fallbackShareRoom(shareUrl) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        this.showNotification('Ссылка для приглашения скопирована!')
+      }).catch((error) => {
+        logger.error('Ошибка копирования ссылки:', error)
+        this.showNotification(`Поделитесь ссылкой: ${shareUrl}`)
+      })
+    } else {
+      this.showNotification(`Поделитесь ссылкой: ${shareUrl}`)
+    }
+  }
+
   subscribeToRoom(roomId) {
     logger.info('Подписка на Realtime обновления', { roomId })
 
@@ -669,6 +940,7 @@ export class App {
       },
       onPlayerJoined: (newRecord) => {
         logger.info('Второй игрок присоединился!')
+        this.hideWaitingForPlayer() // Скрываем индикатор ожидания
         this.showNotification('Противник присоединился! Игра начинается!')
         this.handleGameUpdate(newRecord)
       },
@@ -696,6 +968,11 @@ export class App {
     if (!boardData) {
       logger.error('Не найдено поле с данными доски', { gameState })
       return
+    }
+
+    // Скрываем индикатор ожидания если игра активна
+    if (gameState.status === 'active') {
+      this.hideWaitingForPlayer()
     }
 
     this.components.gameGrid.updateBoard(boardData)
@@ -775,20 +1052,8 @@ export class App {
   }
 
   handleShareRoom() {
-    if (this.state.roomId) {
-      const url = `${window.location.origin}${window.location.pathname}?room=${this.state.roomId}`
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(() => {
-          this.showNotification('Ссылка скопирована в буфер обмена!')
-        }).catch((error) => {
-          logger.error('Ошибка копирования ссылки:', error)
-          this.showNotification(`Поделитесь ссылкой: ${url}`)
-        })
-      } else {
-        this.showNotification(`Поделитесь ссылкой: ${url}`)
-      }
-    }
+    // Используем новый метод
+    this.handleShareRoomClick()
   }
 
   copyRoomId() {
@@ -880,7 +1145,8 @@ export class App {
       context,
       userState: {
         roomId: this.state.roomId,
-        isLoading: this.state.isLoading
+        isLoading: this.state.isLoading,
+        isFirstPlayer: this.state.isFirstPlayer
       }
     })
     
@@ -906,6 +1172,11 @@ export class App {
     // Очищаем контекстное меню
     if (this.contextMenuManager) {
       this.contextMenuManager.hide()
+    }
+    
+    // Очищаем share modal
+    if (this.shareModalManager) {
+      this.shareModalManager.destroy()
     }
   }
 }

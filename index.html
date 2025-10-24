@@ -56,13 +56,27 @@
 
     <!-- Game Screen -->
     <div id="game-screen" class="game-screen" style="display: none;">
-      <!-- Room Info -->
+      <!-- Enhanced Room Info with Share Functionality -->
       <div class="room-info">
-        <span class="room-info__label">ID комнаты:</span>
-        <span id="room-id-display" class="room-info__value">-</span>
-        <button id="copy-room-id-btn" class="room-info__copy-btn">
-          Копировать
-        </button>
+        <div class="room-info__main">
+          <span class="room-info__label">ID комнаты:</span>
+          <span id="room-id-display" class="room-info__value">-</span>
+        </div>
+        
+        <div class="room-info__actions">
+          <button id="copy-room-id-btn" class="room-info__btn room-info__btn--secondary" title="Скопировать ID">
+            📋 Копировать
+          </button>
+          <button id="share-room-btn" class="room-info__btn room-info__btn--primary" title="Отправить ссылку для приглашения">
+            🔗 Отправить игру
+          </button>
+        </div>
+        
+        <!-- Waiting for Player Indicator -->
+        <div id="waiting-indicator" class="waiting-indicator" style="display: none;">
+          <div class="waiting-indicator__spinner"></div>
+          <span class="waiting-indicator__text">Ожидаем второго игрока...</span>
+        </div>
       </div>
 
       <!-- Turn Indicator -->
@@ -87,6 +101,52 @@
 
   <!-- Error Message -->
   <div id="error-message" class="error-message" style="display: none;">
+  </div>
+
+  <!-- Share Modal for better UX -->
+  <div id="share-modal" class="share-modal" style="display: none;">
+    <div class="share-modal__backdrop"></div>
+    <div class="share-modal__content">
+      <div class="share-modal__header">
+        <h3 class="share-modal__title">🎯 Пригласить в игру</h3>
+        <button id="close-share-modal" class="share-modal__close">×</button>
+      </div>
+      
+      <div class="share-modal__body">
+        <p class="share-modal__description">
+          Отправьте эту ссылку другу для присоединения к игре:
+        </p>
+        
+        <div class="share-modal__link-container">
+          <input 
+            id="share-link-input" 
+            type="text" 
+            class="share-modal__link-input" 
+            readonly
+            placeholder="Ссылка будет сгенерирована автоматически"
+          />
+          <button id="copy-share-link-btn" class="share-modal__copy-btn">
+            📋 Копировать
+          </button>
+        </div>
+        
+        <!-- Native share options if available -->
+        <div id="native-share-container" class="share-modal__native" style="display: none;">
+          <button id="native-share-btn" class="share-modal__native-btn">
+            📤 Поделиться
+          </button>
+        </div>
+        
+        <div class="share-modal__tips">
+          <h4 class="share-modal__tips-title">Полезно знать:</h4>
+          <ul class="share-modal__tips-list">
+            <li>Ссылка автоматически откроет игру</li>
+            <li>Никаких дополнительных действий не нужно</li>
+            <li>Игра начнется сразу после присоединения</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Footer -->
