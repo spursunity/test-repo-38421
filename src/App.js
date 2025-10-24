@@ -1,5 +1,5 @@
 import { initAuth, supabase } from './services/supabase.js'
-import { createGame, joinGame, revealCell, validateGuess, getGameState } from './services/gameService.js'
+import { createGame, joinGame, revealCell, validateGuess, skipTurn, getGameState } from './services/gameService.js'
 import { realtimeManager } from './services/realtimeService.js'
 import { GameGrid } from './components/GameGrid.js'
 import { GuessInput } from './components/GuessInput.js'
@@ -399,6 +399,11 @@ export class App {
 
     this.components.guessInput.setSubmitHandler((word) => {
       this.handleGuessSubmit(word)
+    })
+
+    // Добавляем обработчик для пропуска хода
+    this.components.guessInput.setSkipHandler(() => {
+      this.handleSkipTurn()
     })
 
     this.components.gameOverScreen.setNewGameHandler(() => {
@@ -1028,6 +1033,29 @@ export class App {
       this.hideLoading()
     } catch (error) {
       this.handleError(error, 'Ошибка проверки слова')
+    }
+  }
+
+  /**
+   * Обработка пропуска хода
+   */
+  async handleSkipTurn() {
+    logger.info('Обработка пропуска хода')
+
+    try {
+      this.showLoading('Пропуск хода...')
+      const result = await skipTurn(this.state.roomId)
+
+      if (result.skipped) {
+        this.showNotification('Ход пропущен! Ход переходит к сопернику')
+      } else {
+        // Не должно случиться, но на всякий случай
+        this.showNotification('Ход передан сопернику')
+      }
+
+      this.hideLoading()
+    } catch (error) {
+      this.handleError(error, 'Ошибка пропуска хода')
     }
   }
 
