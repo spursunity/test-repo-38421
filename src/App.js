@@ -319,8 +319,10 @@ export class App {
       roomId: null,
       gameState: null,
       isLoading: false,
-      isCreatingGame: false, // Новый флаг для предотвращения двойного создания
-      isFirstPlayer: false // Флаг для определения первого игрока
+      isCreatingGame: false, // Флаг для предотвращения двойного создания
+      isFirstPlayer: false, // Флаг для определения первого игрока
+      playerJoinedNotificationShown: false, // НОВОЕ: Флаг для отслеживания показа уведомления
+      previousGameState: null // НОВОЕ: Состояние для сравнения изменений
     }
 
     this.components = {
@@ -802,6 +804,7 @@ export class App {
 
     this.state.isCreatingGame = true
     this.state.isFirstPlayer = true // Устанавливаем флаг первого игрока
+    this.state.playerJoinedNotificationShown = false // НОВОЕ: Сбрасываем флаг уведомления
     
     // Сбрасываем флаг через короткое время
     setTimeout(() => {
@@ -853,6 +856,7 @@ export class App {
       const result = await joinGame(roomId)
       this.state.roomId = roomId
       this.state.isFirstPlayer = false // Второй игрок
+      this.state.playerJoinedNotificationShown = false // НОВОЕ: Сбрасываем флаг уведомления
 
       logger.info('Присоединились к игре', { roomId, firstPlayer: result.firstPlayer })
 
@@ -944,9 +948,28 @@ export class App {
         this.handleGameUpdate(newRecord)
       },
       onPlayerJoined: (newRecord) => {
-        logger.info('Второй игрок присоединился!')
-        this.hideWaitingForPlayer() // Скрываем индикатор ожидания
-        this.showNotification('Противник присоединился! Игра начинается!')
+        // ИСПРАВЛЕНИЕ: Улучшенная логика определения подключения второго игрока
+        logger.info('Обработка события onPlayerJoined', { 
+          newRecord,
+          playerJoinedNotificationShown: this.state.playerJoinedNotificationShown,
+          isFirstPlayer: this.state.isFirstPlayer,
+          previousGameState: this.state.previousGameState
+        })
+        
+        // Показываем уведомление только если:
+        // 1. Уведомление еще не было показано
+        // 2. Мы первый игрок (который ждет подключения второго)
+        // 3. В игре теперь есть второй игрок
+        if (!this.state.playerJoinedNotificationShown && 
+            this.state.isFirstPlayer && 
+            newRecord.player2_id) {
+          
+          this.hideWaitingForPlayer() // Скрываем индикатор ожидания
+          this.showNotification('Противник присоединился! Игра начинается!')
+          this.state.playerJoinedNotificationShown = true // Помечаем, что уведомление показано
+          logger.info('Показано уведомление о подключении второго игрока')
+        }
+        
         this.handleGameUpdate(newRecord)
       },
       onCellRevealed: (newRecord) => {
@@ -963,6 +986,9 @@ export class App {
 
   handleGameUpdate(gameState) {
     logger.info('Обновление игры', { gameState })
+    
+    // НОВОЕ: Сохраняем предыдущее состояние для сравнения
+    this.state.previousGameState = this.state.gameState
     this.state.gameState = gameState
 
     // Поддержка разных структур данных
@@ -1174,7 +1200,8 @@ export class App {
       userState: {
         roomId: this.state.roomId,
         isLoading: this.state.isLoading,
-        isFirstPlayer: this.state.isFirstPlayer
+        isFirstPlayer: this.state.isFirstPlayer,
+        playerJoinedNotificationShown: this.state.playerJoinedNotificationShown
       }
     })
     
